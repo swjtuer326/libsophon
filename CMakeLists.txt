@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 cmake_policy(SET CMP0048 NEW)
 
 project("libsophon"
-    VERSION 0.4.10)
+    VERSION 0.4.11)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -153,11 +153,11 @@ else()
         else()
             message(FATAL_ERROR "The tpu-runtime directory does not contain a valid CMakeLists.txt file.\nPlease run 'git submodule update --init' in libsophon")
         endif()
-        if(EXISTS "${CMAKE_SOURCE_DIR}/libsophav/CMakeLists.txt")
-            add_subdirectory(libsophav)
-        else()
-            message(FATAL_ERROR "The libsophav directory does not contain a valid CMakeLists.txt file.\nPlease run 'git submodule update --init' in libsophon")
-        endif()
+    endif()
+    if(EXISTS "${CMAKE_SOURCE_DIR}/libsophav/CMakeLists.txt")
+        add_subdirectory(libsophav)
+    else()
+        message(FATAL_ERROR "The libsophav directory does not contain a valid CMakeLists.txt file.\nPlease run 'git submodule update --init' in libsophon")
     endif()
     if (NOT "${PLATFORM}" STREQUAL "cmodel")
         add_subdirectory(doc)
@@ -172,5 +172,5 @@ else()
 
     # run cpack after subdirectories, so it would pack by component
     include(CPack)
-    
+
 endif()
