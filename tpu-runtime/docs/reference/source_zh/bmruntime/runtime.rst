@@ -1096,7 +1096,6 @@ get_bmodel_api_info_c
 >>>>>>>>>>>>>>>>>>>>
 
 .. code-block:: cpp
-  
    /*
     * This API only supports the neuron nework that is static-compiled.
     * After calling this API, api info will be setted and return,
