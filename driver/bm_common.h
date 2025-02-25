@@ -28,6 +28,7 @@
 #include "bm_msgfifo.h"
 #include "bm_debug.h"
 #include "bm_monitor.h"
+#include "bm_pm.h"
 #include "version.h"
 
 #ifndef __maybe_unused
@@ -135,7 +136,7 @@ struct bootloader_version{
 	char *bl2_version;
 	char *bl31_version;
 	char *uboot_version;
-	char *chip_version;
+	int *chip_version;
 };
 
 struct chip_info {
@@ -222,6 +223,8 @@ struct chip_info {
 	void (*bmdrv_stop_arm9)(struct bm_device_info *);
 
 	void (*bmdrv_clear_cdmairq)(struct bm_device_info *bmdi);
+	void (*bmdrv_clear_cdmairq0)(struct bm_device_info *bmdi);
+	void (*bmdrv_clear_cdmairq1)(struct bm_device_info *bmdi);
 	int (*bmdrv_clear_msgirq)(struct bm_device_info *bmdi);
 	int (*bmdrv_clear_msgirq_by_core)(struct bm_device_info *bmdi, int core_id);
 	int (*bmdrv_clear_cpu_msgirq)(struct bm_device_info *bmdi);
@@ -310,6 +313,8 @@ struct bm_device_info {
 
 	struct bm_monitor_thread_info monitor_thread_info;
 
+	struct bm_pm_thread_info pm_thread_info;
+
 	struct proc_dir_entry *card_proc_dir;
 
 	struct proc_dir_entry *proc_dir;
@@ -320,6 +325,7 @@ struct bm_device_info {
 	jpu_drv_context_t jpudrvctx;
 	atomic_t dev_recovery;
 	spacc_drv_context_t spaccdrvctx;
+	spinlock_t irq_lock;
 	struct mutex efuse_mutex;
 	bool eth_state;
 	struct eth_dev_info vir_eth;

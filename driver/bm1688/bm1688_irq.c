@@ -1,6 +1,7 @@
 #include <linux/types.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
+#include <linux/spinlock.h>
 #include "bm_common.h"
 #include "bm_card.h"
 #include "bm1688_reg.h"
@@ -116,6 +117,7 @@ void bm1688_enable_intc_irq(struct bm_device_info *bmdi, int irq_num, bool irq_e
 	int irq_enable_offset = 0x0;
 	int irq_parent_mask = 0x0;
 	int value = 0x0;
+	unsigned long flag;
 
 	if (irq_num < 0 || irq_num > 192) {
 		pr_info("bmdrv_enbale_intc_irq irq_num = %d is wrong!\n", irq_num);
@@ -151,12 +153,16 @@ void bm1688_enable_intc_irq(struct bm_device_info *bmdi, int irq_num, bool irq_e
 		intc_reg_write(bmdi, BM1688_INTC0_BASE_OFFSET + BM1688_INTC_INTEN_H_OFFSET, value);
 	}
 
+	spin_lock_irqsave(&bmdi->irq_lock, flag);
+
 	value = intc_reg_read(bmdi, irq_enable_offset);
 	if (irq_enable == true)
 		value |= (0x1 << (irq_num % 32));
 	else
 		value &= (~(0x1 << (irq_num % 32)));
 	intc_reg_write(bmdi, irq_enable_offset, value);
+
+	spin_unlock_irqrestore(&bmdi->irq_lock, flag);
 }
 
 void bm1688_unmaskall_intc_irq(struct bm_device_info *bmdi)
