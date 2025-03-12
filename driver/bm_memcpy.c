@@ -333,6 +333,8 @@ int bmdev_memcpy_s2d(struct bm_device_info *bmdi, struct file *file, uint64_t ds
 	u64 p_addr = 0;
 	int index = 0;
 
+	PR_DEBUG("[%s] params:dst=%lld, src=%p, size=%d, inter=%d\n", __func__, dst, src, size, intr);
+
 	if (cdma_iommu_mode == KERNEL_USER_SETUP_IOMMU) {
 		struct bm_buffer_object *bo_src = NULL;
 
@@ -435,6 +437,8 @@ int bmdev_memcpy_s2d_internal(struct bm_device_info *bmdi, u64 dst, const void *
 	u64 p_addr = 0;
 	int index = 0x0;
 
+	PR_DEBUG("[%s] params:dst=%lld, src=%p, size=%d\n", __func__, dst, src, size);
+
 	for (pass_idx = 0, cur_addr_inc = 0; pass_idx < (size + realmem_size - 1) / realmem_size; pass_idx++) {
 		if ((pass_idx + 1) * realmem_size < size)
 			size_step = realmem_size;
@@ -468,6 +472,8 @@ int bmdev_memcpy_d2s_internal(struct bm_device_info *bmdi, void *dst, u64 src, u
 	void *v_addr = NULL;
 	u64 p_addr = 0;
 	int index = 0x0;
+
+	PR_DEBUG("[%s] params:dst=%p, src=%lld, size=%d\n", __func__, dst, src, size);
 
 	for (pass_idx = 0, cur_addr_inc = 0; pass_idx < (size + realmem_size - 1) / realmem_size; pass_idx++) {
 		if ((pass_idx + 1) * realmem_size < size)
@@ -506,6 +512,8 @@ int bmdev_memcpy_d2s(struct bm_device_info *bmdi, struct file *file, void __user
         void *v_addr = NULL;
 	u64 p_addr = 0;
 	int index = 0x0;
+
+	PR_DEBUG("[%s] params:dst=%p, src=%lld, size=%d, inter=%d\n", __func__, dst, src, size, intr);
 
 	if (cdma_iommu_mode == KERNEL_USER_SETUP_IOMMU) {
 		struct bm_buffer_object *bo_dst = NULL;

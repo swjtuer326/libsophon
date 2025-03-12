@@ -33,6 +33,10 @@
 #include "efuse.h"
 #endif
 
+uint32_t tpu_log_lv = 0;
+
+module_param(tpu_log_lv, int, 0644);
+
 extern dev_t bm_devno_base;
 extern dev_t bm_ctl_devno_base;
 extern int bmdrv_reset_bmcpu(struct bm_device_info *bmdi);

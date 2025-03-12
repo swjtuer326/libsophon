@@ -146,6 +146,11 @@ void bmdrv_msg_irq_handler(struct bm_device_info *bmdi, int core_id)
 				api_entry.thd_info->cpl_api_seq[core_id] = api_entry.thd_api_seq[core_id];
 				api_entry.h_info->h_cpl_api_seq[core_id] = api_entry.thd_info->cpl_api_seq[core_id];
 			}
+			if (core_id == 0) {
+				bmdi->bm_sync_api_seq = api_entry.global_api_seq;
+			} else if (core_id == 1) {
+				bmdi->bm_sync_api_seq1 = api_entry.global_api_seq;
+			}
 			bmdrv_post_api_process(bmdi, api_entry, channel, core_id);
 			if (api_entry.h_info)
 				wake_up_all(&api_entry.h_info->h_msg_done);

@@ -898,9 +898,9 @@ static int bm1688_single_cdma_transfer(struct bm_device_info *bmdi, struct file 
 		nv_cdma_end_us = bm1688_timer_get_time_us(bmdi);
 		PR_TRACE("src:0x%llx dst:0x%llx size:%llx\n", parg->src, parg->dst, parg->size);
 		PR_TRACE("time = %d\n", nv_cdma_end_us - nv_cdma_start_us);
-		PR_TRACE("time = %d, function_num = %d, start = %d, end = %d, size = %llx, max_payload = %d\n",
+		PR_TRACE("time = %d, function_num = %d, start = %d, end = %d, size = %llx\n",
 			nv_cdma_end_us - nv_cdma_start_us, bmdi->cinfo.chip_index & 0x3,
-			nv_cdma_start_us, nv_cdma_end_us, parg->size, cdma_max_payload);
+			nv_cdma_start_us, nv_cdma_end_us, parg->size);
 
 		if (ret_wait) {
 			PR_TRACE("End : wait cdma done\n");

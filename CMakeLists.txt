@@ -22,6 +22,32 @@ message(STATUS "SOC_KERNEL_PATH............. " ${SOC_LINUX_DIR})
 string(TIMESTAMP COMPILE_TIME %Y%m%d-%H%M%S)
 set(BUILD_DATE ${COMPILE_TIME})
 
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHORT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+
+execute_process(
+    COMMAND bash -c "git diff-index --name-only HEAD | grep -v \"$(git submodule foreach --quiet 'echo $path')\" "
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_DIRTY_STATUS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+
+if(GIT_DIRTY_STATUS)
+    set(GIT_DIRTY_FLAG "-dirty")
+else()
+    set(GIT_DIRTY_FLAG "")
+endif()
+
+set(GIT_VER_STRING "${GIT_SHORT_HASH}${GIT_DIRTY_FLAG}")
+
+message(STATUS "Git Version: "${GIT_VER_STRING})
+
 configure_file("${CMAKE_SOURCE_DIR}/bmlib/include/version.h.in"
     "${CMAKE_SOURCE_DIR}/bm-smi/include/version.h")
 configure_file("${CMAKE_SOURCE_DIR}/bmlib/include/version.h.in"
