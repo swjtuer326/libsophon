@@ -36,9 +36,9 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #else
 #define DLLEXPORT __attribute__((visibility("default")))
 #endif
-#define COMMIT_HASH "b3f5308f"
+#define COMMIT_HASH "826782c8"
 #define BRANCH_NAME "HEAD"
-#define COMMIT_COUNT "2168"
+#define COMMIT_COUNT "2170"
 #define FIRMWARE_NAME "libbm1684x_kernel_module.so"
 
 bm_status_t sg_malloc_device_mem(bm_handle_t handle, sg_device_mem_st *pmem, unsigned int size) {
@@ -278,7 +278,7 @@ int bm_image_zeros_soc(bm_image image)
     bm_mem_flush_device_mem(image.image_private->handle, &dmem);
     bm_mem_mmap_device_mem(image.image_private->handle, &dmem, &virt_addr);
     memset((void*)(uintptr_t)virt_addr, 0, total_size);
-    bm_mem_unmap_device_mem(image.image_private->handle, (void *)&virt_addr, total_size);
+    bm_mem_unmap_device_mem(image.image_private->handle, (void *)virt_addr, total_size);
     bm_mem_flush_device_mem(image.image_private->handle, &dmem);
     return 0;
 }
