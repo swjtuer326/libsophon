@@ -10,14 +10,16 @@
  * Sophon VPU en/decoder.
  */
 
-#ifndef BM_VIDEO_INTERFACE_H
-#define BM_VIDEO_INTERFACE_H
+#include <stdint.h>
+
+#ifndef BM_VPUDEC_INTERFACE_H
+#define BM_VPUDEC_INTERFACE_H
 
 #define STREAM_BUF_SIZE                 0x400000
 #define TRY_FLOCK_OPEN
 
 #if defined(_WIN32) || defined(WIN32) || defined(__WIN32__)
-#define ATTRIBUTE 
+#define ATTRIBUTE
 #define DECL_EXPORT __declspec(dllexport)
 #define DECL_IMPORT __declspec(dllimport)
 #else
@@ -26,33 +28,122 @@
 #define DECL_IMPORT
 #endif
 
+typedef enum
+{
+    BMVPU_DEC_LOG_LEVEL_NONE=0,
+    BMVPU_DEC_LOG_LEVEL_ERR,
+    BMVPU_DEC_LOG_LEVEL_WARN,
+    BMVPU_DEC_LOG_LEVEL_INFO,
+    BMVPU_DEC_LOG_LEVEL_TRACE,
+    BMVPU_DEC_LOG_LEVEL_MAX_LOG_LEVEL
+}
+BmVpuDecLogLevel;
+
+#ifndef BOOL
+typedef int     BOOL;
+#endif
+
+#ifndef TRUE
+# define TRUE    1
+#endif
+
+#ifndef FALSE
+# define FALSE   0
+#endif
+
 #ifdef _WIN32
 typedef unsigned long long u64;
-#elif __linux__
+#else
 typedef unsigned long u64;
 #endif
 
+#define MAX_FILE_PATH               256
+
+typedef enum{
+    BMDEC_AVC       = 0,  //264
+    BMDEC_HEVC      = 12,  //265
+}BmVpuDecStreamFormat;
+
+typedef enum  {
+    BMDEC_FRAME_SKIP_MODE	    = 0,     // disable skip mode,decode normally
+    BMDEC_SKIP_NON_REF_NON_I    = 1,     // Skip non-reference non-intra frames
+    BMDEC_SKIP_NON_I            = 2,     // Skip non-intra frames
+}BmVpuDecSkipMode;
+
 typedef struct {
-    int                 streamFormat;  //0:264
-    int                 wtlFormat;   //0:420 1 tiled v
+    unsigned int  size;
+    u64      phys_addr;
+    u64      virt_addr;
+
+} BmVpuDecDMABuffer;
+
+typedef enum {
+    BMDEC_OUTPUT_UNMAP,       // Original data
+    BMDEC_OUTPUT_TILED = 100, // Output in tiled format(deprecated)
+    BMDEC_OUTPUT_COMPRESSED,  // Output compressed data
+} BmVpuDecOutputMapType;
+
+/**
+ * @brief Enum for different bitstream modes in BMDEC.
+ *
+ * This enum defines different modes for handling the bitstream in BMDEC.
+ * - BMDEC_BS_MODE_INTERRUPT: Indicates the interrupt mode, which likely means the bitstream processing can be interrupted.
+ * - BMDEC_BS_MODE_RESERVED: Represents a reserved mode, likely indicating a mode that is not currently used or defined.
+ * - BMDEC_BS_MODE_PIC_END: Indicates the picture end mode, which likely means the end of a picture in the bitstream.
+ */
+typedef enum {
+    BMDEC_BS_MODE_INTERRUPT = 0,  /**< Interrupt mode */
+    BMDEC_BS_MODE_RESERVED,   /**< Reserved mode */
+    BMDEC_BS_MODE_PIC_END   = 2,    /**< Picture end mode */
+} BmVpuDecBitStreamMode;
+
+typedef enum
+{
+    BM_VPU_DEC_PIX_FORMAT_YUV420P = 0,   /* planar 4:2:0 chroma_interleave is 0;*/
+    BM_VPU_DEC_PIX_FORMAT_YUV422P = 1,   /* dec not support.*/
+    BM_VPU_DEC_PIX_FORMAT_YUV444P = 3,   /* dec not support.*/
+    BM_VPU_DEC_PIX_FORMAT_YUV400  = 4,   /* dec not support 8-bit greayscale */
+    BM_VPU_DEC_PIX_FORMAT_NV12    = 5,   /* planar 4:2:0 chroma_interleave is 1, nv21 is 0;*/
+    BM_VPU_DEC_PIX_FORMAT_NV21    = 6,   /* planar 4:2:0 chroma_interleave is 1, nv21 is 1*/
+    BM_VPU_DEC_PIX_FORMAT_NV16    = 7,   /* dec not support.*/
+    BM_VPU_DEC_PIX_FORMAT_NV24    = 8,   /* dec not support.*/
+    BM_VPU_DEC_PIX_FORMAT_COMPRESSED = 9,
+    BM_VPU_DEC_PIX_FORMAT_COMPRESSED_10BITS = 10,
+} BmVpuDecPixFormat;
+
+typedef struct {
+    BmVpuDecStreamFormat        streamFormat;  //0:264
+    BmVpuDecOutputMapType       wtlFormat;
+    BmVpuDecSkipMode            skip_mode;                  //2 only decode I frames.
+    BmVpuDecBitStreamMode       bsMode;                     //!<<0, RING buffer interrupt. You don't know what's a frame.
+
     int                 enableCrop;                 //!<< option for saving yuv
-    int                 cbcrInterleave;             //!<< 0: None, 1: NV12, 2: NV21
-    int                 nv21;                       //!<< FALSE: NV12, TRUE: NV21,
-                                                    //!<< This variable is valid when cbcrInterleave is TRUE
+    BmVpuDecPixFormat   pixel_format;
     int                 secondaryAXI;               //!<< enable secondary AXI
 
-    int                 streamBufferSize;           //!<< Set stream buffer size. 0, default size 0x700000.
     int                 mp4class;
-    int                 bsMode;                     //!<<0, RING buffer interrupt. You don't know what's a frame.
-    int                 extraFrameBufferNum;
     int                 frameDelay;                 //!<< >0, output the display frame after frameDelay frames decoding.
 
     int                 pcie_board_id;
     int                 pcie_no_copyback;
     int                 enable_cache;
-    int                 skip_mode;                  //2 only decode I frames.
     int                 perf;
     int                 core_idx;
+    int                 cmd_queue_depth;
+    int                 decode_order;
+    int                 picWidth;
+    int                 picHeight;
+    int                 timeout;
+    int                 timeout_count;
+
+    int                 extraFrameBufferNum;
+    int                 min_framebuf_cnt;
+    int                 framebuf_delay;
+    int                 streamBufferSize;           //!<< Set stream buffer size. 0, default size 0x700000.
+    BmVpuDecDMABuffer   bitstream_buffer;
+    BmVpuDecDMABuffer*  frame_buffer;
+    BmVpuDecDMABuffer*  Ytable_buffer;
+    BmVpuDecDMABuffer*  Ctable_buffer;
     int                 reserved[13];
 } BMVidDecParam;
 
@@ -60,7 +151,11 @@ typedef enum {
     BMDEC_UNCREATE,
     BMDEC_UNLOADING,
     BMDEC_UNINIT,
+    BMDEC_INITING,
+    BMDEC_WRONG_RESOLUTION,
+    BMDEC_FRAMEBUFFER_NOTENOUGH,
     BMDEC_DECODING,
+    BMDEC_FRAME_BUF_FULL,
     BMDEC_ENDOF,
     BMDEC_STOP,
     BMDEC_HUNG,
@@ -68,11 +163,42 @@ typedef enum {
     BMDEC_CLOSED,
 } BMDecStatus;
 
-typedef enum {
-    BMDEC_OUTPUT_UNMAP,
-    BMDEC_OUTPUT_TILED = 100,
-    BMDEC_OUTPUT_COMPRESSED,
-} BMDecOutputMapType;
+typedef enum
+{
+    BM_ERR_VDEC_INVALID_CHNID = -27,
+    BM_ERR_VDEC_ILLEGAL_PARAM,
+    BM_ERR_VDEC_EXIST,
+    BM_ERR_VDEC_UNEXIST,
+    BM_ERR_VDEC_NULL_PTR,
+    BM_ERR_VDEC_NOT_CONFIG,
+    BM_ERR_VDEC_NOT_SUPPORT,
+    BM_ERR_VDEC_NOT_PERM ,
+    BM_ERR_VDEC_INVALID_PIPEID,
+    BM_ERR_VDEC_INVALID_GRPID,
+    BM_ERR_VDEC_NOMEM,
+    BM_ERR_VDEC_NOBUF,
+    BM_ERR_VDEC_BUF_EMPTY,
+    BM_ERR_VDEC_BUF_FULL,
+    BM_ERR_VDEC_SYS_NOTREADY,
+    BM_ERR_VDEC_BADADDR,
+    BM_ERR_VDEC_BUSY,
+    BM_ERR_VDEC_SIZE_NOT_ENOUGH,
+    BM_ERR_VDEC_INVALID_VB,
+    BM_ERR_VDEC_ERR_INIT,
+    BM_ERR_VDEC_ERR_INVALID_RET,
+    BM_ERR_VDEC_ERR_SEQ_OPER,
+    BM_ERR_VDEC_ERR_VDEC_MUTEX,
+    BM_ERR_VDEC_ERR_SEND_FAILED,
+    BM_ERR_VDEC_ERR_GET_FAILED,
+    BM_ERR_VDEC_ERR_HUNG,
+    BM_ERR_VDEC_FAILURE,
+} BMVidDecRetStatus;
+
+typedef enum{
+    BMDEC_FLUSH_FAIL = -1,
+    BMDEC_FLUSH_SUCCESS,
+    BMDEC_FLUSH_BUF_FULL,
+}BMDecFlushStatus;
 
 typedef struct BMVidStream {
     unsigned char* buf;
@@ -81,6 +207,7 @@ typedef struct BMVidStream {
     unsigned int header_size;
     unsigned char* extradata;
     unsigned int extradata_size;
+    unsigned char end_of_stream;
     u64 pts;
     u64 dts;
 } BMVidStream;
@@ -145,7 +272,7 @@ The size and position of cropping window in full frame buffer is presented
 by using this structure.
 @endverbatim
 */
-    CropRect         picCropRect;
+    CropRect      picCropRect;
     int           mp4DataPartitionEnable; /**< data_partitioned syntax value in MPEG4 VOL header */
     int           mp4ReversibleVlcEnable; /**< reversible_vlc syntax value in MPEG4 VOL header */
 /**
@@ -293,36 +420,53 @@ please refer to the 'Appendix: ERROR DEFINITION in programmer\'s guide'.
     unsigned int          sequenceNo;    /**< This is the number of sequence information. This variable is increased by 1 when VPU detects change of sequence. */
 } BMVidStreamInfo;
 
+/**
+ * @brief Enum for defining the type of video frames in BmVpuDec.
+ *
+ * This enum defines the types of video frames, including progressive and interlaced frames.
+ * - PROGRESSIVE_FRAME: Represents progressive scan frames, where each frame is displayed in a single pass without interlacing.
+ * - INTERLACED_FRAME: Represents interlaced frames, where each frame consists of two interleaved fields displayed sequentially for smoother motion.
+ */
+typedef enum {
+    PROGRESSIVE_FRAME = 0,  /**< Progressive scan frame */
+    INTERLACED_FRAME =  1    /**< Interlaced frame */
+} BmVpuDecLaceFrame;
+
+
+/**
+ * @brief Enum for specifying the format of frame buffers in BmVpuDec.
+ *
+ * This enum defines different formats for frame buffers in BmVpuDec.
+ * - BMDEC_FORMAT_UNCOMPRESSED: Represents uncompressed frame buffer format.
+ * - BMDEC_FORMAT_COMPRESSED: Represents compressed frame buffer format.
+ * - BMDEC_FORMAT_COMPRESSED_10BITS: Represents 10-bit compressed frame buffer format.
+ */
+
+typedef enum {
+    BMDEC_PIC_TYPE_I       = 0, /**< I picture */
+    BMDEC_PIC_TYPE_P       = 1, /**< P picture */
+    BMDEC_PIC_TYPE_B       = 2, /**< B picture (except VC1) */
+    BMDEC_PIC_TYPE_D       = 3, /**< D picture in MPEG2 that is only composed of DC coefficients (MPEG2 only) */
+    BMDEC_PIC_TYPE_S       = 4, /**< S picture in MPEG4 that is an acronym of Sprite and used for GMC (MPEG4 only)*/
+    BMDEC_PIC_TYPE_IDR     = 5, /**< H.264/H.265 IDR picture */
+    BMDEC_PIC_TYPE_AVS2_G  = 6, /**< G picture in AVS2 */
+}BmVpuDecPicType;
+
+
 #ifndef BMVIDFRAME
 #define BMVIDFRAME
 typedef struct BMVidFrame {
-    int picType;
-    unsigned char* buf[8]; /**< 0: Y virt addr, 1: Cb virt addr: 2, Cr virt addr. 4: Y phy addr, 5: Cb phy addr, 6: Cr phy addr */
-    int stride[8];
-    unsigned int width;
-    unsigned int height;
-    int frameFormat;
-    int interlacedFrame;
+    BmVpuDecPicType             picType;
+    BmVpuDecLaceFrame           interlacedFrame;
+    unsigned char*              buf[8]; /**< 0: Y virt addr, 1: Cb virt addr: 2, Cr virt addr. 4: Y phy addr, 5: Cb phy addr, 6: Cr phy addr */
+    int                         stride[8];
+    unsigned int                width;
+    unsigned int                height;
+
+
     int lumaBitDepth;   /**< Bit depth for luma component */
     int chromaBitDepth; /**< Bit depth for chroma component  */
-/**
-@verbatim
-It specifies a chroma interleave mode of frame buffer.
-
-@* 0 : Cb data are written in Cb frame memory and Cr data are written in Cr frame memory. (chroma separate mode)
-@* 1 : Cb and Cr data are written in the same chroma memory. (chroma interleave mode)
-@endverbatim
-*/
-    int cbcrInterleave;
-/**
-@verbatim
-It specifies the way chroma data is interleaved in the frame buffer, bufCb or bufCbBot.
-
-@* 0 : CbCr data is interleaved in chroma memory (NV12).
-@* 1 : CrCb data is interleaved in chroma memory (NV21).
-@endverbatim
-*/
-    int nv21;
+    BmVpuDecPixFormat pixel_format;
 /**
 @verbatim
 It specifies endianess of frame buffer.
@@ -353,31 +497,33 @@ NOTE: For setting specific values of 128 bit endiness, please refer to the 'WAVE
     unsigned int coded_height;
 } BMVidFrame;
 #endif
+
 typedef void* BMVidCodHandle;
 
+DECL_EXPORT void bmvpu_dec_set_logging_threshold(BmVpuDecLogLevel log_level);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_create(BMVidCodHandle* pVidCodHandle, BMVidDecParam decParam);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_get_caps(BMVidCodHandle vidCodHandle, BMVidStreamInfo* streamInfo);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_decode(BMVidCodHandle vidCodHandle, BMVidStream vidStream);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_get_output(BMVidCodHandle vidCodHandle, BMVidFrame* frame);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_clear_output(BMVidCodHandle vidCodHandle, BMVidFrame* frame);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_flush(BMVidCodHandle vidCodHandle); //in the endof of the file, flush and then close the decoder.
 
-DECL_EXPORT int BMVidDecCreate(BMVidCodHandle* pVidCodHandle, BMVidDecParam decParam);
-DECL_EXPORT int BMVidDecReset(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidDecGetCaps(BMVidCodHandle vidCodHandle, BMVidStreamInfo* streamInfo);
-DECL_EXPORT int BMVidDecDecode(BMVidCodHandle vidCodHandle, BMVidStream vidStream);
-DECL_EXPORT BMVidFrame* BMVidDecGetOutput(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidDecClearOutput(BMVidCodHandle vidCodHandle, BMVidFrame* frame);
-DECL_EXPORT int BMVidDecFlush(BMVidCodHandle vidCodHandle); //in the endof of the file, flush and then close the decoder.
-DECL_EXPORT int BMVidDecFlush2(BMVidCodHandle vidCodHandle); //flush the decoder and clear the output.
-
-DECL_EXPORT int BMVidDecDelete(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidDecSeqInit(BMVidCodHandle vidCodHandle);
-DECL_EXPORT BMDecStatus BMVidGetStatus(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidGetStreamBufferEmptySize(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidGetAllFramesInBuffer(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidGetEmptyInputBufCnt(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidGetPktInBufCount(BMVidCodHandle vidCodHandle);
-DECL_EXPORT int BMVidVpuReset(int devIdx, int coreIdx);
-DECL_EXPORT int getcoreidx(BMVidCodHandle handle);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_delete(BMVidCodHandle vidCodHandle);
+DECL_EXPORT BMDecStatus bmvpu_dec_get_status(BMVidCodHandle vidCodHandle);
+DECL_EXPORT int bmvpu_dec_get_stream_buffer_empty_size(BMVidCodHandle vidCodHandle);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_get_all_frame_in_buffer(BMVidCodHandle vidCodHandle);
+DECL_EXPORT int bmvpu_dec_get_all_empty_input_buf_cnt(BMVidCodHandle vidCodHandle);
+DECL_EXPORT int bmvpu_dec_get_pkt_in_buf_cnt(BMVidCodHandle vidCodHandle);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_reset(int devIdx, int coreIdx);
+DECL_EXPORT int bmvpu_dec_get_core_idx(BMVidCodHandle handle);
 //just for debuging.
-DECL_EXPORT int BMVidVpuDumpStream(BMVidCodHandle vidCodHandle, unsigned char *p_stream, int size);
-DECL_EXPORT int BMVidVpuGetInstIdx(BMVidCodHandle vidCodHandle);
+DECL_EXPORT int bmvpu_dec_dump_stream(BMVidCodHandle vidCodHandle, unsigned char *p_stream, int size);
+DECL_EXPORT int bmvpu_dec_get_inst_idx(BMVidCodHandle vidCodHandle);
 
-DECL_EXPORT void bm_syscxt_excepted(int coreid);
-DECL_EXPORT void bm_syscxt_set(int coreid, int enable); /* 0 - disable, 1 - enable */
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_get_stream_info(BMVidCodHandle vidCodHandle, int* width, int* height, int* mini_fb, int* frame_delay);
+
+#ifdef BM_PCIE_MODE
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_read_memory(int coreIdx, u64 addr, unsigned char *data, int len, int endian);
+#endif
+u64 bmvpu_dec_calc_cbcr_addr(int codec_type, u64 y_addr, int y_stride, int frame_height); // calc cbcr addr by offset.
 #endif

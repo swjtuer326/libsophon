@@ -17,8 +17,9 @@
 #if defined(_WIN32) || defined(WIN32) || defined(__WIN32__)
 #include<stdbool.h>
 #endif
-#include "bmlib_runtime.h"
-#include "bm_video_interface.h"
+#include "bm_vpudec_interface.h"
+
+#define MAX_SEQUENCE_MEM_COUNT          16
 
 typedef enum {
     BMDEC_START_CREATE,
@@ -50,6 +51,8 @@ typedef struct BMVidDecConfig_struct {
     BOOL                cbcrInterleave;             //!<< 0: None, 1: NV12, 2: NV21
     BOOL                nv21;                       //!<< FALSE: NV12, TRUE: NV21,
                                                     //!<< This variable is valid when cbcrInterleave is TRUE
+    Uint32              extern_picWidth;
+    Uint32              extern_picHeight;
     EndianMode          streamEndian;
     EndianMode          frameEndian;
     Int32               secondaryAXI;
@@ -91,10 +94,15 @@ typedef struct BMVidExtraInfo {
     int chromaLocation;
 } BMVidExtraInfo;
 
+typedef struct {
+    DecGetFramebufInfo  fbInfo;
+    vpu_buffer_t        allocFbMem[MAX_REG_FRAME];
+} SequenceMemInfo;
+
 typedef struct BMVidCodInst {
     DecHandle codecInst;
-    bm_device_mem_t vbStream;
-    bm_device_mem_t vbUserData;
+    vpu_buffer_t vbStream;
+    vpu_buffer_t vbUserData;
     volatile Uint32 seqInitFlag;
     volatile Uint32 isStreamBufFilled;
     volatile BMDecStatus decStatus;
@@ -102,10 +110,10 @@ typedef struct BMVidCodInst {
     Queue* ppuQ;
     Queue* displayQ;
     Queue* freeQ;
-    bm_device_mem_t        pFbMem[MAX_REG_FRAME];
-    Uint64                 fbMemVaddr[MAX_REG_FRAME];
-    bm_device_mem_t        pPPUFbMem[MAX_REG_FRAME];
-    Uint64                 pPUFbMemVaddr[MAX_REG_FRAME];
+    vpu_buffer_t        pFbMem[MAX_REG_FRAME];
+    vpu_buffer_t        pPPUFbMem[MAX_REG_FRAME];
+    vpu_buffer_t        pYtabMem[MAX_REG_FRAME];
+    vpu_buffer_t        pCtabMem[MAX_REG_FRAME];
     volatile int endof_flag;
     Queue* inputQ;
     osal_cond_t inputCond;
@@ -133,6 +141,7 @@ typedef struct BMVidCodInst {
     int no_reorder_flag;
     int enable_cache;
     BMVidExtraInfo extraInfo;
+    SequenceMemInfo seqMemInfo[MAX_SEQUENCE_MEM_COUNT];
     //bm_handle_t devHandles;
     int64_t total_time;
     int64_t max_time;
@@ -140,6 +149,15 @@ typedef struct BMVidCodInst {
     int64_t dec_idx;
     int perf;
     BMVidFrame cache_bmframe[32];
+    int enable_decode_order;
+    int decode_index_map[MAX_REG_FRAME];
+    int timeout;
+    int timeout_count;
+
+    int bitstream_from_user;
+    int framebuf_from_user;
+    int min_framebuf_cnt;
+    int framebuf_delay;
 } BMVidCodInst;
 
 typedef struct PkgInfo {
@@ -152,13 +170,8 @@ typedef struct PkgInfo {
 
 typedef struct BMVidCodInst* BMVidHandle;
 
-typedef struct {
-    DecGetFramebufInfo  fbInfo;
-    bm_device_mem_t        allocFbMem[MAX_REG_FRAME];
-} SequenceMemInfo;
-
 int BMVidDecCreateW5(BMVidCodHandle *pVidCodHandle, BMVidDecParam *decParam);
-
+int bmvpu_dec_seq_init(BMVidCodHandle vidCodHandle);
 void bm_syscxt_init(void *p_dec_param, BMVidCodHandle vidHandle);
 int  bm_syscxt_status(int coreid, int instid, int pos);
 int  bm_syscxt_chkstatus(int coreid);
