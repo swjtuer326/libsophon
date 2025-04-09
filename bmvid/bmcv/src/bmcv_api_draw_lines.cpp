@@ -337,7 +337,7 @@ bm_status_t bmcv_image_draw_lines(
             draw_line(mat, sp[i], ep[i], color, thickness);
         }
 #ifdef SOC_MODE
-        ret = bm_mem_unmap_device_mem(image.image_private->handle, (void *)&virt_addr, total_size);
+        ret = bm_mem_unmap_device_mem(image.image_private->handle, (void *)virt_addr, total_size);
         if (ret != BM_SUCCESS) {
             bmlib_log("DRAW_LINE", BMLIB_LOG_ERROR, "bm_mem_unmap_device_mem failed with error code %d\r\n", ret);
             goto fail;

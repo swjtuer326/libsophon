@@ -40,7 +40,6 @@
 #include <linux/proc_fs.h>
 #include <linux/uuid.h>
 #include <linux/kthread.h>
-#include <linux/pid.h>
 
 #if defined(BM_ION_MEM)
 #include <linux/dma-buf.h>
@@ -1016,7 +1015,6 @@ int get_lock(int core_idx)
     int val2 = current->pid;
     int ret = 1;
     int count = 0;
-    int timeout_cnt = 0;
     volatile int *addr = (int *)(s_instance_pool[core_idx].base +  s_instance_pool[core_idx].size - PTHREAD_MUTEX_T_HANDLE_SIZE*4);
     //while(__atomic_compare_exchange_n(addr, &val, val1, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == 0){
     while((val = __sync_val_compare_and_swap(addr, 0, val1)) != 0){
@@ -1028,19 +1026,9 @@ int get_lock(int core_idx)
             val = 0;
         }
         if(count >= 5000) {
-            if(timeout_cnt < 20)
-            {
-                pr_info("can't get lock, core:%d org: 0x%lx, ker: 0x%lx\n", core_idx, *addr, val1);
-                timeout_cnt++;
-            }
+            pr_info("can't get lock, org: %d, ker: %d", *addr, val1);
             ret = 0;
-            count = 0;
             // break;
-        }
-
-        if(find_vpid(*addr) == NULL) {
-            DPRINTK("pid:0x%lx inexistence but hold core:%d lock\n", *addr, core_idx);
-            __sync_lock_release(addr);
         }
         msleep(2);
         count += 1;

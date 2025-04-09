@@ -616,7 +616,7 @@ bm_status_t bmcv_image_put_text(
     put_text(mat, text, org, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness);
 
 #ifdef SOC_MODE
-    ret = bm_mem_unmap_device_mem(image.image_private->handle, (void *)&virt_addr, total_size);
+    ret = bm_mem_unmap_device_mem(image.image_private->handle, (void *)virt_addr, total_size);
     if (ret != BM_SUCCESS) {
         bmlib_log("PUT_TEXT", BMLIB_LOG_ERROR, "bm_mem_unmap_device_mem failed with error code %d\r\n", ret);
         return ret;
