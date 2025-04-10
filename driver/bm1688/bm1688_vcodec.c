@@ -41,28 +41,23 @@ unsigned int vc_write_reg(unsigned int addr, unsigned int data)
 	return bm_write32(g_bmdi, addr, data);
 }
 
-uint64_t vc_ion_alloc(uint32_t len, int32_t *fd)
+uint64_t vc_ion_alloc(uint32_t len, void** ion_handle)
 {
 	struct ion_allocation_data alloc_data = {0};
 
 	alloc_data.len = len;
 	alloc_data.heap_id_mask = 0x1 << 1;
 
-	ion_alloc(g_bmdi, &alloc_data);
+	*ion_handle = (void *)ion_alloc_nofd(g_bmdi, &alloc_data);
+	if (*ion_handle == NULL)
+		return 0;
 
-	*fd = alloc_data.fd;
 	return alloc_data.paddr;
 }
 
-unsigned int vc_ion_free(uint32_t fd)
+unsigned int vc_ion_free(void* ion_handle)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
-	close_fd(fd);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
-	ksys_close(fd);
-#else
-	sys_close(fd);
-#endif
+	ion_free_nofd((struct ion_buffer *)ion_handle);
 	return 0;
 }
 

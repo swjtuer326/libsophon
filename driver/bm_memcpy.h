@@ -112,4 +112,5 @@ int bmdev_memcpy_c2c(struct bm_device_info *bmdi, struct file *file, u64 src, u6
 		bool intr, bm_cdma_iommu_mode cdma_iommu_mode);
 int bmdev_dual_cdma_memcpy_for_test(struct bm_device_info *bmdi, struct file *file, unsigned long arg);
 
+int bmdrv_compare_fw_stage(struct bm_device_info *bmdi, u64 src, u32 size, const unsigned int *firmware);
 #endif

@@ -132,6 +132,10 @@ if(${SOC_MODE} EQUAL 1)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${DRIVER_BIN_TARGET}
         DESTINATION ./data
         COMPONENT libsophon)
+else()
+install(FILES ${CMAKE_SOURCE_DIR}/driver/spi_flash_bmsophon.bin 
+    DESTINATION ./data 
+    COMPONENT libsophon)
 endif()
 file(GLOB firmware_files ${CMAKE_SOURCE_DIR}/driver/bm1684*.bin_*)
 foreach(file ${firmware_files})
@@ -153,9 +157,12 @@ foreach(file ${driver_files})
                  DESTINATION ../driver-${CPACK_PACKAGE_VERSION}
                  COMPONENT driver)
     else()
-        install(FILES ${file}
-                 DESTINATION ../driver-${CPACK_PACKAGE_VERSION}
-                 COMPONENT driver)
+    get_filename_component(_filename ${file} NAME)
+        if(NOT _filename STREQUAL "spi_flash_bmsophon.bin")
+            install(FILES ${file}
+                    DESTINATION ../driver-${CPACK_PACKAGE_VERSION}
+                    COMPONENT driver)
+        endif()
     endif()
 endforeach()
 

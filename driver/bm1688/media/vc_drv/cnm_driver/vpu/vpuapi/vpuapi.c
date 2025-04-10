@@ -190,7 +190,6 @@ static RetCode InitializeVPU(Uint32 coreIdx, const Uint16* code, Uint32 size)
     }
     mutex_unlock(&__vdi_init_mutex);
 
-    // EnterLock(coreIdx);
     if (EnterLock(coreIdx) != RETCODE_SUCCESS) {
         return RETCODE_FAILURE;
     }
@@ -1911,7 +1910,7 @@ RetCode VPU_DecGiveCommand(DecHandle handle, CodecCommand cmd, void* param)
             pDecInfo->vbUserData.phys_addr = pDecInfo->userDataBufAddr;
             pDecInfo->vbUserData.size = pDecInfo->userDataBufSize;
             pDecInfo->vbUserData.virt_addr = (unsigned long)userDataVirtAddr;
-            if (vdi_attach_dma_memory(pCodecInst->coreIdx, &pDecInfo->vbUserData) != 0) {
+            if (vdi_attach_dma_memory(pCodecInst->coreIdx, &pDecInfo->vbUserData, 0) != 0) {
                 return RETCODE_INSUFFICIENT_RESOURCE;
             }
             break;

@@ -43,10 +43,12 @@
 #include "bm1684/bm1684_ce.h"
 #include "bm1688/bm1688_irq.h"
 #include "bm1688/bm1688_card.h"
+#include "bm1688/bm1688_msgfifo.h"
 //#include "bm1688/ddr/ddr.h"
 #include "bm_card.h"
 #include "bm_napi.h"
 #include "sg_comm.h"
+#include "bm_io.h"
 
 #define IOMMU_ADDR_BIT_NUM (40)
 extern int vc_drv_init(struct bm_device_info *bmdi);
@@ -319,7 +321,7 @@ static int bmdrv_cinfo_init(struct bm_device_info *bmdi, struct pci_dev *pdev)
 		cinfo->bmdrv_stop_arm9 = bm1688_stop_c906;
 
 		cinfo->bm_reg = &bm_reg_bm1688;
-		//cinfo->share_mem_size = 1 << 12;  /* 4k DWORD, 16kB */
+		cinfo->share_mem_size = 1 << 12;  /* 4k DWORD, 16kB */
 		cinfo->chip_type = "bm1688";
 #ifdef PLATFORM_PALLADIUM
 		cinfo->platform = PALLADIUM;
@@ -339,6 +341,9 @@ static int bmdrv_cinfo_init(struct bm_device_info *bmdi, struct pci_dev *pdev)
 		//cinfo->bmdrv_clear_msgirq = bm1684_clear_msgirq;
 		//cinfo->bmdrv_pending_msgirq_cnt = bm1684_pending_msgirq_cnt;
 		cinfo->bmdrv_config_iatu_for_function_x = bm1688_config_iatu_for_function_x;
+
+		cinfo->bmdrv_clear_msgirq_by_core = bm1688_clear_msgirq;
+		cinfo->bmdrv_pending_msgirq_cnt = bm1688_pending_msgirq_cnt;
 
 		//cinfo->dev_info.chip_temp_reg = 0x00;
 		//cinfo->dev_info.board_temp_reg = 0x01;
@@ -555,6 +560,12 @@ static int bmdrv_hardware_init(struct bm_device_info *bmdi)
 		// 	spacc_init(bmdi);
 		// 	mutex_init(&bmdi->efuse_mutex);
 		}
+
+		top_reg_write( bmdi, 0x2198,0);
+		top_reg_write( bmdi, 0x219c,0);
+		top_reg_write( bmdi, 0x21a0,0);
+		top_reg_write( bmdi, 0x21a4,0);
+		top_reg_write( bmdi, 0x21a8,0);
 		//gp_reg_write_enh(bmdi, GP_REG_C906_FW_MODE, FW_PCIE_MODE);
 		break;
 	default:
@@ -1161,11 +1172,11 @@ static int bmdrv_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto err_irq;
 	}
 
-	//rc = bmdrv_fw_load(bmdi, NULL, NULL);
-	//if (rc) {
-	//	pr_err("bmdrv: firmware load failed!\n");
-	//	goto err_enable_attr;
-	//}
+	rc = bmdrv_fw_load(bmdi, NULL, NULL);
+	if (rc) {
+		pr_err("bmdrv: firmware load failed!\n");
+		goto err_enable_attr;
+	}
 
 	bmdrv_smbus_set_default_value(pdev, bmdi);
 

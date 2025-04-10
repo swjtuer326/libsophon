@@ -146,5 +146,6 @@ void ion_device_create(struct bm_device_info *bmdi);
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data);
 int ion_alloc(struct bm_device_info *bmdi, struct ion_allocation_data* alloc_data);
 void ion_carveout_heap_destroy(struct ion_carveout_heap *carveout_heap);
-
+struct ion_buffer *ion_alloc_nofd(struct bm_device_info *bmdi, struct ion_allocation_data *alloc_data);
+void ion_free_nofd(struct ion_buffer *buffer);
 #endif

@@ -350,7 +350,7 @@ int vdi_allocate_common_memory(unsigned long core_idx)
         return -1;
     }
 
-    VLOG(INFO, "[VDI] vdi_allocate_common_memory, physaddr=0x%x, virtaddr=0x%x\n", (int)vdb.phys_addr, (int)vdb.virt_addr);
+    VLOG(INFO, "[VDI] vdi_allocate_common_memory, physaddr=0x%lx, virtaddr=0x%lx\n", vdb.phys_addr, vdb.virt_addr);
     // convert os driver buffer type to vpu buffer type
     vdi->pvip->vpu_common_buffer.size = SIZE_COMMON;
     vdi->pvip->vpu_common_buffer.phys_addr = (unsigned long)(vdb.phys_addr);
@@ -372,8 +372,8 @@ int vdi_allocate_common_memory(unsigned long core_idx)
 
     vdi_set_ddr_map(core_idx, vdb.phys_addr >> 32);
 
-    VLOG(INFO, "[VDI] vdi_get_common_memory physaddr=0x%x, size=%d, virtaddr=0x%x\n", \
-        (int)vdi->vpu_common_memory.phys_addr, (int)vdi->vpu_common_memory.size, (int)vdi->vpu_common_memory.virt_addr);
+    VLOG(INFO, "[VDI] vdi_get_common_memory physaddr=0x%lx, size=%d, virtaddr=0x%lx\n", \
+        vdi->vpu_common_memory.phys_addr, (int)vdi->vpu_common_memory.size, vdi->vpu_common_memory.virt_addr);
 
     return 0;
 }
@@ -390,6 +390,11 @@ vpu_instance_pool_t *vdi_get_instance_pool(unsigned long core_idx)
 
     if(!vdi || vdi->vpu_fd == (VPU_FD)-1 || vdi->vpu_fd == (VPU_FD)0x00 )
         return NULL;
+
+    if (sizeof(CodecInst) > MAX_INST_HANDLE_SIZE) {
+        VLOG(ERR, "[VDI] CodecInst = %d, MAX_INST_HANDLE_SIZE = %d\n",
+                (int)sizeof(CodecInst), MAX_INST_HANDLE_SIZE);
+    }
 
     osal_memset(&vdb, 0x00, sizeof(vpudrv_buffer_t));
     if (!vdi->pvip)
@@ -548,7 +553,7 @@ int vdi_lock(unsigned long core_idx)
             VLOG(ERR, "%s failed to get lock sync_ret=%d, sync_val=%d, sync_ptr=%d \n", __FUNCTION__, sync_ret, sync_val, (int)*sync_lock_ptr);
             return -1;
         }
-        osal_msleep(1);
+        usleep_range(5, 10);
     }
 
     return 0;//lint !e454
@@ -593,10 +598,10 @@ int vdi_disp_lock(unsigned long core_idx)
     {
         count++;
         if (count > (ATOMIC_SYNC_TIMEOUT)) {
-            VLOG(ERR, "%s failed to get lock sync_ret=%d, sync_val=%d, sync_ptr=%d \n", __FUNCTION__, sync_ret, sync_val, (int)*sync_lock_ptr);
+            VLOG(ERR, "failed to get lock sync_ret=%d, sync_val=%d, sync_ptr=%d \n", sync_ret, sync_val, (int)*sync_lock_ptr);
             return -1;
         }
-        osal_msleep(1);
+        usleep_range(5, 10);
     }
 
     return 0;//lint !e454
@@ -642,10 +647,10 @@ static int vmem_lock(unsigned long core_idx)
     {
         count++;
         if (count > (ATOMIC_SYNC_TIMEOUT)) {
-            VLOG(ERR, "%s failed to get lock sync_ret=%d, sync_val=%d, sync_ptr=%d \n", __FUNCTION__, sync_ret, sync_val, (int)*sync_lock_ptr);
+            VLOG(ERR, "failed to get lock sync_ret=%d, sync_val=%d, sync_ptr=%d \n", sync_ret, sync_val, (int)*sync_lock_ptr);
             return -1;
         }
-        osal_msleep(1);
+        usleep_range(5, 10);
     }
 
     return 0;//lint !e454
@@ -1050,7 +1055,7 @@ unsigned long vdi_get_dma_memory_free_size(unsigned long core_idx)
     return size;
 }
 
-int vdi_attach_dma_memory(unsigned long core_idx, vpu_buffer_t *vb)
+int vdi_attach_dma_memory(unsigned long core_idx, vpu_buffer_t *vb, unsigned char is_cached)
 {
     vdi_info_t *vdi;
     int i;
@@ -1071,6 +1076,7 @@ int vdi_attach_dma_memory(unsigned long core_idx, vpu_buffer_t *vb)
     vdb.base = vb->base;
 
     vdb.virt_addr = vb->virt_addr;
+    vdb.is_cached = is_cached;
 
     vmem_lock(core_idx);
     for (i=0; i<MAX_VPU_BUFFER_POOL; i++)
@@ -1385,6 +1391,7 @@ int vdi_wait_bus_busy(unsigned long core_idx, int timeout, unsigned int gdi_busy
                 return -1;
             }
         }
+        usleep_range(5, 10);    // delay more to give idle time to OS;
     }
     return 0;
 }
@@ -1417,6 +1424,7 @@ int vdi_wait_vpu_busy(unsigned long core_idx, int timeout, unsigned int addr_bit
                 return -1;
             }
         }
+        usleep_range(5, 10);   // delay more to give idle time to OS;
     }
     return 0;
 }
@@ -1448,6 +1456,7 @@ int vdi_wait_vcpu_bus_busy(unsigned long core_idx, int timeout, unsigned int gdi
                 return -1;
             }
         }
+        usleep_range(5, 10);   // delay more to give idle time to OS;
     }
     return 0;
 }
@@ -1681,5 +1690,13 @@ int vdi_release_instance(unsigned long core_idx)
     return 0;
 }
 
+int vdi_get_suspend_state(void)
+{
+#ifdef VPU_SUPPORT_CLOCK_CONTROL
+    return vpu_get_suspend_state();
+#else
+    return 0;
+#endif
+}
 #endif	//#if defined(linux) || defined(__linux) || defined(ANDROID)
 

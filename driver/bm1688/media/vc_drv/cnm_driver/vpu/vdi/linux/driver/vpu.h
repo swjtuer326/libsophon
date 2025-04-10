@@ -103,5 +103,7 @@ long vpu_free_extern_memory(vpudrv_buffer_t *vdb);
 int  vpu_free_extern_buffers(int core_idx);
 void vpu_clk_disable(int core_idx);
 void vpu_clk_enable(int core_idx);
+
+int vpu_get_suspend_state(void);
 #endif
 
