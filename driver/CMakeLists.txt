@@ -52,10 +52,10 @@ add_custom_command(OUTPUT ${DKMS_CONF_TARGET}
     # setup DEB scripts
     # post-install
     COMMAND echo "if [ ! -d \"/lib/firmware\" ]; then mkdir -p /lib/firmware; fi" > postinst
-    COMMAND echo "ln -s /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware0.bin /lib/firmware/bm1688_firmware0.bin" >> postinst
-    COMMAND echo "ln -s /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware1.bin /lib/firmware/bm1688_firmware1.bin" >> postinst
-    COMMAND echo "ln -s /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware0_os.bin /lib/firmware/bm1688_firmware0_os.bin" >> postinst
-    COMMAND echo "ln -s /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware1_os.bin /lib/firmware/bm1688_firmware1_os.bin" >> postinst
+    COMMAND echo "ln -sf /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware0.bin /lib/firmware/bm1688_firmware0.bin" >> postinst
+    COMMAND echo "ln -sf /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware1.bin /lib/firmware/bm1688_firmware1.bin" >> postinst
+    COMMAND echo "ln -sf /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware0_os.bin /lib/firmware/bm1688_firmware0_os.bin" >> postinst
+    COMMAND echo "ln -sf /opt/sophon/driver-${CPACK_PACKAGE_VERSION}/bm1688_firmware1_os.bin /lib/firmware/bm1688_firmware1_os.bin" >> postinst
     COMMAND echo >> postinst
 
     COMMAND echo "if [ -e \"/usr/share/misc/pci.ids\" ]; then" >> postinst
