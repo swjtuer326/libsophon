@@ -7,8 +7,10 @@
 #include "bmcv_internal.h"
 #include "bmcv_api.h"
 #include "bmcv_common_bm1684.h"
-#ifdef __riscv
 #include <string>
+
+#if __linux__
+#include <dlfcn.h>
 #endif
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -193,6 +195,18 @@ static bm_status_t fill_image_private(bm_image *res, int *stride) {
                 layout::plane_layout(1, 1, H, W, data_size);
             break;
         }
+        case FORMAT_ARGB4444_PACKED:
+        case FORMAT_ABGR4444_PACKED:
+        case FORMAT_ARGB1555_PACKED:
+        case FORMAT_ABGR1555_PACKED:{
+            image_private->plane_num = 1;
+            image_private->memory_layout[0] = layout::plane_layout(1, 1, H, W * 2, data_size);
+            break;
+        }
+        default:
+            printf("UNKONW IMAGE FORMAT! \n");
+            return BM_ERR_DATA;
+            break;
     }
 
     if (!use_default_stride) {
@@ -501,6 +515,7 @@ bm_status_t bm_image_create(bm_handle_t              handle,
                   __LINE__);
         return BM_ERR_NOMEM;
     }
+    res->image_private->owned_mem = true;
     memset(res->image_private->data,
            0,
            sizeof(bm_device_mem_t) * MAX_bm_image_CHANNEL);
@@ -531,6 +546,102 @@ bm_status_t bm_image_create(bm_handle_t              handle,
     return BM_SUCCESS;
 }
 
+bm_status_t bm_image_update(bm_handle_t              handle,
+                            int                      img_h,
+                            int                      img_w,
+                            bm_image_format_ext      image_format,
+                            bm_image_data_format_ext data_type,
+                            bm_image *               res,
+                            int *                    stride) {
+    res->width         = img_w;
+    res->height        = img_h;
+    res->image_format  = image_format;
+    res->data_type     = data_type;
+    if (!res->image_private) {
+        bmlib_log("BMCV",BMLIB_LOG_ERROR, "bm_image image_private is NULL %s: %s: %d\n",
+                  filename(__FILE__),__func__,__LINE__);
+        return BM_ERR_NOMEM;
+    }
+
+    if (bm_image_format_check(img_h, img_w, image_format, data_type) !=
+        BM_SUCCESS) {
+        bmlib_log("BMCV",
+                  BMLIB_LOG_ERROR,
+                  "illegal format or size %s: %s: %d\n",
+                  filename(__FILE__),
+                  __func__,
+                  __LINE__);
+        return BM_ERR_PARAM;
+    }
+    if (fill_image_private(res, stride) != BM_SUCCESS) {
+        bmlib_log("BMCV", BMLIB_LOG_ERROR, "illegal stride %s: %s: %d\n",
+                  filename(__FILE__),  __func__, __LINE__);
+        return BM_ERR_PARAM;
+    }
+    res->image_private->handle = handle;
+    return BM_SUCCESS;
+}
+
+
+size_t bmcv_get_private_size(void)
+{
+    return sizeof(struct bm_image_private);
+}
+
+bm_status_t bm_image_create_private(bm_handle_t              handle,
+                            int                      img_h,
+                            int                      img_w,
+                            bm_image_format_ext      image_format,
+                            bm_image_data_format_ext data_type,
+                            bm_image *               res,
+                            int *                    stride,
+                            void*                    bm_private) {
+
+    if (NULL == bm_private) {
+        bmlib_log("BMCV",
+                  BMLIB_LOG_ERROR,
+                  "host memory alloc failed %s: %s: %d\n",
+                  filename(__FILE__),
+                  __func__,
+                  __LINE__);
+        return BM_ERR_NOMEM;
+    }
+
+    res->width         = img_w;
+    res->height        = img_h;
+    res->image_format  = image_format;
+    res->data_type     = data_type;
+    res->image_private = (struct bm_image_private*)bm_private;
+    res->image_private->owned_mem = false;
+
+    memset(res->image_private->data,
+           0,
+           sizeof(bm_device_mem_t) * MAX_bm_image_CHANNEL);
+    if (bm_image_format_check(img_h, img_w, image_format, data_type) !=
+        BM_SUCCESS) {
+        bmlib_log("BMCV",
+                  BMLIB_LOG_ERROR,
+                  "illegal format or size %s: %s: %d\n",
+                  filename(__FILE__),
+                  __func__,
+                  __LINE__);
+        res->image_private = nullptr;
+        return BM_ERR_PARAM;
+    }
+    if (fill_image_private(res, stride) != BM_SUCCESS) {
+        bmlib_log("BMCV",
+                  BMLIB_LOG_ERROR,
+                  "illegal stride %s: %s: %d\n",
+                  filename(__FILE__),
+                  __func__,
+                  __LINE__);
+        res->image_private = nullptr;
+        return BM_ERR_PARAM;
+    }
+    res->image_private->handle = handle;
+    return BM_SUCCESS;
+}
+
 bm_status_t bm_image_tensor_create(bm_handle_t              handle,
                                    int                      img_n,
                                    int                      img_c,
@@ -547,8 +658,11 @@ bm_status_t bm_image_tensor_create(bm_handle_t              handle,
     res->image_c             = img_c;
     res->image.image_private = new bm_image_private;
     if (!res->image.image_private)
+    {
         return BM_ERR_NOMEM;
+    }
 
+    res->image.image_private->owned_mem = true;
     fill_image_private_tensor(*res);
     res->image.image_private->handle = handle;
     return BM_SUCCESS;
@@ -574,7 +688,12 @@ bm_status_t bm_image_destroy(bm_image image) {
         bm_jpu_jpeg_dec_close(image.image_private->decoder);
     }
 #endif
-    delete image.image_private;
+
+    if(true == image.image_private->owned_mem)
+    {
+        delete image.image_private;
+    }
+
     image.image_private = nullptr;
 
     return BM_SUCCESS;
@@ -1009,7 +1128,7 @@ bm_status_t bm_image_write_to_bmp(bm_image image, const char *filename) {
     }
     int component = image.image_format == FORMAT_GRAY ? 1 : 3;
     int stride[4] = {0};
-    bm_image_get_stride(image, stride);
+    bm_image_get_stride(image_temp, stride);
     void *      buf_tmp = malloc(stride[0] * image_temp.height);
     void *      buf = malloc(image_temp.width * image_temp.height * component);
     bm_status_t ret = bm_image_copy_device_to_host(image_temp, &buf_tmp);
@@ -1586,4 +1705,320 @@ bm_status_t bmcv_close_cpu_process(bm_handle_t handle) {
     return BM_SUCCESS;
 }
 
+uint16_t fp32idata_to_fp16idata(uint32_t f,int round_method) {
+  uint32_t f_exp;
+  uint32_t f_sig;
+  uint32_t h_sig=0x0u;
+  uint16_t h_sgn, h_exp;
 
+  h_sgn = (uint16_t)((f & 0x80000000u) >> 16);
+  f_exp = (f & 0x7f800000u);
+
+  /* Exponent overflow/NaN converts to signed inf/NaN */
+  if (f_exp >= 0x47800000u) {
+    if (f_exp == 0x7f800000u) {
+      /* Inf or NaN */
+      f_sig = (f & 0x007fffffu);
+      if (f_sig != 0) {
+        /* NaN */
+        return 0x7fffu;
+      } else {
+        /* signed inf */
+        return (uint16_t)(h_sgn + 0x7c00u);
+      }
+    } else {
+      /* overflow to signed inf */
+      return (uint16_t)(h_sgn + 0x7c00u);
+    }
+  }
+
+/* Exponent underflow converts to a subnormal half or signed zero */
+#ifdef CUDA_T
+  if (f_exp <= 0x38000000u) ////exp= -15, fp16is denormal ,the smallest value of fp16 normal = 1x2**(-14)
+#else
+  if (f_exp < 0x38000000u)
+#endif
+  {
+    /*
+     * Signed zeros, subnormal floats, and floats with small
+     * exponents all convert to signed zero half-floats.
+     */
+    if (f_exp < 0x33000000u) {
+      return h_sgn;
+    }
+    /* Make the subnormal significand */
+    f_exp >>= 23;
+    f_sig = (0x00800000u + (f & 0x007fffffu));
+
+/* Handle rounding by adding 1 to the bit beyond half precision */
+    switch (round_method) {
+      case 0:
+// ROUND_TO_NEAREST_EVEN
+    /*
+     * If the last bit in the half significand is 0 (already even), and
+     * the remaining bit pattern is 1000...0, then we do not add one
+     * to the bit after the half significand.  In all other cases, we do.
+     */
+    if ((f_sig & ((0x01u << (127 - f_exp)) - 1)) != (0x01u << (125 - f_exp))) {
+      f_sig += 1 << (125 - f_exp);
+    }
+    f_sig >>= (126 - f_exp);
+    h_sig = (uint16_t)(f_sig);
+    break;
+  case 1:
+    //JUST ROUND
+    f_sig += 1 << (125 - f_exp);
+    f_sig >>= (126 - f_exp);
+    h_sig = (uint16_t)(f_sig);
+    break;
+   case 2:
+// ROUND_TO_ZERO
+    f_sig >>= (126 - f_exp);
+    h_sig = (uint16_t)(f_sig);
+    break;
+   case 3:
+    //JUST_FLOOR
+      if ((f_sig & ((0x01u << (126 - f_exp)) - 1)) != 0x0u ) {
+        if(h_sgn)
+          f_sig  += 1 << (126 - f_exp);
+      }
+      f_sig >>= (126 - f_exp);
+      h_sig = (uint16_t)(f_sig);
+    break;
+   case 4:
+    //just_ceil
+      if ((f_sig & ((0x01u << (126 - f_exp)) - 1)) != 0x0u ) {
+        if( !h_sgn)
+          f_sig  += 1 << (126 - f_exp);
+      }
+      f_sig >>= (126 - f_exp);
+      h_sig = (uint16_t)(f_sig);
+    break;
+    //
+   default:
+// ROUND_TO_ZERO
+      f_sig >>= (126 - f_exp);
+      h_sig = (uint16_t)(f_sig);
+      break;
+    }
+    /*
+     * If the rounding causes a bit to spill into h_exp, it will
+     * increment h_exp from zero to one and h_sig will be zero.
+     * This is the correct result.
+     */
+    return (uint16_t)(h_sgn + h_sig);
+  }
+
+  /* Regular case with no overflow or underflow */
+  h_exp = (uint16_t)((f_exp - 0x38000000u) >> 13);
+  /* Handle rounding by adding 1 to the bit beyond half precision */
+  f_sig = (f & 0x007fffffu);
+
+    switch (round_method) {
+      case 0:
+          // ROUND_TO_NEAREST_EVEN
+            /*
+             * If the last bit in the half significand is 0 (already even), and
+             * the remaining bit pattern is 1000...0, then we do not add one
+             * to the bit after the half significand.  In all other cases, we do.
+             */
+            if ((f_sig & 0x00003fffu) != 0x00001000u) {
+              f_sig = f_sig + 0x00001000u;
+            }
+              h_sig = (uint16_t)(f_sig >> 13);
+              break;
+      case 1:
+          // JUST_ROUND
+              f_sig = f_sig + 0x00001000u;
+              h_sig = (uint16_t)(f_sig >> 13);
+              break;
+      case 2:
+          // ROUND_TO_ZERO
+            h_sig = (uint16_t)(f_sig >> 13);
+            break;
+      case 3:
+          // JUST_FLOOR
+            if ((f_sig & 0x00001fffu) != 0x00000000u) {
+              if ( h_sgn ) {
+                f_sig = f_sig + 0x00002000u;
+              }
+            }
+            h_sig = (uint16_t)(f_sig >> 13);
+            break;
+      case 4:
+          // JUST_CEIL
+            if ((f_sig & 0x00001fffu) != 0x00000000u) {
+              if ( !h_sgn )
+                f_sig = f_sig + 0x00002000u;
+            }
+            h_sig = (uint16_t)(f_sig >> 13);
+            break;
+      default:
+          // ROUND_TO_ZERO
+            h_sig = (uint16_t)(f_sig >> 13);
+            break;
+    }
+  /*
+   * If the rounding causes a bit to spill into h_exp, it will
+   * increment h_exp by one and h_sig will be zero.  This is the
+   * correct result.  h_exp may increment to 15, at greatest, in
+   * which case the result overflows to a signed inf.
+   */
+
+  return h_sgn + h_exp + h_sig;
+}
+
+static void set_denorm(void)
+{
+
+#ifdef __x86_64__
+    const int MXCSR_DAZ = (1<<6);
+    const int MXCSR_FTZ = (1<<15);
+
+    unsigned int mxcsr = __builtin_ia32_stmxcsr ();
+    mxcsr |= MXCSR_DAZ | MXCSR_FTZ;
+    __builtin_ia32_ldmxcsr (mxcsr);
+#endif
+
+}
+
+fp16 fp32tofp16 (float A,int round_method) {
+    fp16_data res;
+    fp32_data ina;
+
+    ina.fdata = A;
+    //// VppInfo("round_method =%d  \n",round_method);
+    set_denorm();
+    res.idata = fp32idata_to_fp16idata(ina.idata, round_method);
+    return res.ndata;
+}
+
+float fp16tofp32(fp16 h) {
+    fp16_data dfp16;
+    dfp16.ndata = h;
+    fp32_data ret32;
+    uint32_t sign = (dfp16.idata & 0x8000) << 16;
+    uint32_t mantissa = (dfp16.idata & 0x03FF);
+    uint32_t exponent = (dfp16.idata & 0x7C00) >> 10;
+
+    if (exponent == 0) {
+        if (mantissa == 0) {
+            return *((float*)(&sign));
+        }
+        else {
+            exponent = 1;
+            while ((mantissa & 0x0400) == 0) {
+                mantissa <<= 1;
+                exponent++;
+            }
+            mantissa &= 0x03FF;
+            exponent = (127 - 15 - exponent) << 23;
+            mantissa <<= 13;
+            ret32.idata = *((uint32_t*)(&sign)) | (*((uint32_t*)(&mantissa))) | (*((uint32_t*)(&exponent)));
+            return ret32.fdata;
+        }
+    }
+    else if (exponent == 0x1F) {
+        if (mantissa == 0) {
+            return *((float*)(&sign)) / 0.0f;
+        }
+        else {
+            return *((float*)(&sign)) / 0.0f;
+        }
+    }
+    else {
+        exponent = (exponent + (127 - 15)) << 23;
+        mantissa <<= 13;
+        ret32.idata = *((uint32_t*)(&sign)) | (*((uint32_t*)(&mantissa))) | (*((uint32_t*)(&exponent)));
+        return ret32.fdata;
+    }
+}
+
+typedef const char *(*version_func_t)();
+void bmcv_print_version() {
+    const char *env_val = getenv("BMCV_PRINT_VERSION");
+    if (env_val == nullptr || strcmp(env_val, "1") != 0) {
+        return;
+    }
+    const char    *fw_fname       = "libbm1684x_kernel_module.so";
+    char    fw_path[512]   = {0};
+    char    bmcv_path[512] = {0};
+    char          *ptr;
+    int            ret = 0;
+    void          *version_handle;
+    version_func_t get_version;
+    const char    *version_info;
+
+#ifdef __linux__
+    Dl_info dl_info;
+    ret = dladdr((void *)bmcv_print_version, &dl_info);
+    if (ret == 0) {
+        printf("dladdr() failed: %s\n", dlerror());
+        return;
+    }
+    if (dl_info.dli_fname == NULL) {
+        printf("%s is NOT a symbol\n", __FUNCTION__);
+        return;
+    }
+
+    ptr = (char *)strrchr(dl_info.dli_fname, '/');
+    if (!ptr) {
+        printf("Invalid absolute path name of libbmcv.so\n");
+        return;
+    }
+
+    int dirname_len = ptr - dl_info.dli_fname + 1;
+    if (dirname_len <= 0) {
+        printf("Invalid length of folder name\n");
+        return;
+    }
+    strncpy(bmcv_path, dl_info.dli_fname, dirname_len);
+    strcat(bmcv_path, ptr + 1);
+    printf("libbmcv_path:%s\n", bmcv_path);
+    version_handle = dlopen(bmcv_path, RTLD_LAZY);
+    if (!version_handle) {
+        bmlib_log(BMCV_LOG_TAG, BMLIB_LOG_ERROR, "Cannot open library: %s\n", dlerror());
+        return;
+    }
+    get_version = (version_func_t)dlsym(version_handle, "libbmcv_version");
+    if (get_version) {
+        version_info = get_version();
+        if (version_info) {
+            printf("%s\n", version_info);
+        }
+        dlclose(version_handle);
+    } else {
+        printf("The current bmcv has no version information!\n");
+    }
+
+    if (0 != find_tpufirmaware_path(fw_path, fw_fname)) {
+        printf("libbm1684x_kernel_module.so does not exist\n");
+        return;
+    }
+    printf("tpu_firmware_path:%s\n", fw_path);
+
+#ifdef SOC_MODE
+    version_handle = dlopen(fw_path, RTLD_LAZY);
+    if (!version_handle) {
+        bmlib_log(BMCV_LOG_TAG, BMLIB_LOG_ERROR, "Cannot open library: %s\n", dlerror());
+        return;
+    }
+    get_version = (version_func_t)dlsym(version_handle, "tpu_firmware_version");
+    if (get_version) {
+        version_info = get_version();
+        if (version_info) {
+            printf("%s\n", version_info);
+        }
+        dlclose(version_handle);
+    } else {
+        printf("The current tpu_firmware has no version information!\n");
+    }
+#else
+    char cmd[1024] = {0};
+    sprintf(cmd, "strings %s | grep -E \"tpu_firmware_version:.*, branch:.*, minor version:.*, commit:.*\"", fw_path);
+    ret = system(cmd);
+#endif
+
+#endif
+    return;
+}

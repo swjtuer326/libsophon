@@ -14,9 +14,7 @@
 #endif
 #include "bmcv_api.h"
 #include "test_misc.h"
-#ifdef __riscv
 #include <cstdint>
-#endif
 
 using namespace std;
 

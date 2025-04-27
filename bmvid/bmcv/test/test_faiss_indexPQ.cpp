@@ -143,7 +143,7 @@ bm_status_t compare_result_with_faiss_ADC(
                            nycodes_input_dev,
                            distance_output_dev,
                            index_output_dev,
-                           ny, nx, d, m, ksub, k, IP_metric);
+                           d, m, ksub, ny, nx, k, IP_metric);
     gettimeofday(&t2, NULL);
     std::cout << "TPU using time(us): " << ((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) << "(us)" << std::endl;
     std::cout << "TPU using time(ms): " << ((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000 << "(ms)" << std::endl;
@@ -318,7 +318,7 @@ bm_status_t compare_result_with_faiss_SDC(
                            nycodes_input_dev,
                            distance_output_dev,
                            index_output_dev,
-                           ny, nx, m, ksub, k, IP_metric);
+                           m, ksub, ny, nx, k, IP_metric);
     gettimeofday(&t2, NULL);
     std::cout << "TPU using time(us): " << ((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) << "(us)" << std::endl;
     std::cout << "TPU using time(ms): " << ((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000 << "(ms)" << std::endl;
@@ -746,7 +746,7 @@ int main(int argc, char *args[])
     }
     else
     {
-        if (BM_SUCCESS != compare_result_with_faiss_ADC(ny, nx, d, m, ksub, dsub, k, seed, IP_metric))
+        if (BM_SUCCESS != compare_result_with_faiss_ADC(ny, nx, d, m, ksub, d/m, k, seed, IP_metric))
         {
             return -1;
         }

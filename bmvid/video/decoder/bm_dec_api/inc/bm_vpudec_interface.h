@@ -30,14 +30,18 @@
 
 typedef enum
 {
-    BMVPU_DEC_LOG_LEVEL_NONE=0,
-    BMVPU_DEC_LOG_LEVEL_ERR,
-    BMVPU_DEC_LOG_LEVEL_WARN,
-    BMVPU_DEC_LOG_LEVEL_INFO,
-    BMVPU_DEC_LOG_LEVEL_TRACE,
-    BMVPU_DEC_LOG_LEVEL_MAX_LOG_LEVEL
+    BMVPU_DEC_LOG_LEVEL_ERROR   = 0,
+    BMVPU_DEC_LOG_LEVEL_WARNING = 1,
+    BMVPU_DEC_LOG_LEVEL_INFO    = 2,
+    BMVPU_DEC_LOG_LEVEL_DEBUG   = 3, /* only useful for developers */
+    BMVPU_DEC_LOG_LEVEL_LOG     = 4, /* only useful for developers */
+    BMVPU_DEC_LOG_LEVEL_TRACE   = 5  /* only useful for developers */
 }
 BmVpuDecLogLevel;
+
+typedef void (*BmVpuDecLoggingFunc)(BmVpuDecLogLevel level, char const *file,
+                                        int const line, char const *fn,
+                                        const char *format, ...);
 
 #ifndef BOOL
 typedef int     BOOL;
@@ -158,7 +162,6 @@ typedef enum {
     BMDEC_FRAME_BUF_FULL,
     BMDEC_ENDOF,
     BMDEC_STOP,
-    BMDEC_INT_TIMEOUT,
     BMDEC_HUNG,
     BMDEC_CLOSE,
     BMDEC_CLOSED,
@@ -524,7 +527,7 @@ DECL_EXPORT int bmvpu_dec_get_inst_idx(BMVidCodHandle vidCodHandle);
 DECL_EXPORT BMVidDecRetStatus bmvpu_dec_get_stream_info(BMVidCodHandle vidCodHandle, int* width, int* height, int* mini_fb, int* frame_delay);
 
 #ifdef BM_PCIE_MODE
-DECL_EXPORT BMVidDecRetStatus bmvpu_dec_read_memory(int coreIdx, unsigned long addr, unsigned char *data, int len, int endian);
+DECL_EXPORT BMVidDecRetStatus bmvpu_dec_read_memory(int coreIdx, u64 addr, unsigned char *data, int len, int endian);
 #endif
 u64 bmvpu_dec_calc_cbcr_addr(int codec_type, u64 y_addr, int y_stride, int frame_height); // calc cbcr addr by offset.
 #endif

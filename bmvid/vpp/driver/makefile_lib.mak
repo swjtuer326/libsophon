@@ -104,6 +104,10 @@ ifeq ("$(BUILD_CONFIGURATION)", "loongLinux")
 CFLAGS += -Wl,-melf64loongarch
 endif
 
+ifeq ("$(BUILD_CONFIGURATION)", "sunwayLinux")
+CFLAGS += --sysroot=$(CMAKE_SYSROOT)
+endif
+
 LDLIBS   += -lpthread -lm -lrt
 
 TARGET =$(INSTALL_DIR)/libvpp.a

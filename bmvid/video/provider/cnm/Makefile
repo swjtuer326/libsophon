@@ -34,8 +34,8 @@ DESTDIR ?= /usr/local/lib
 
 ifeq ($(PRODUCT),boda)
 product := CODA960
-ifeq ($(SUBTYPE), fvp)      
-sub_type := CODA960_FVP    
+ifeq ($(SUBTYPE), fvp)
+sub_type := CODA960_FVP
 else ifeq ($(SUBTYPE), palladium)
 sub_type := CODA960_PALLADIUM
 else
@@ -117,14 +117,14 @@ else
 PLATFORM    = nativelinux_64bit
 endif
 
-CROSS_CC_PREFIX = 
+CROSS_CC_PREFIX =
 VDI_C           = $(BMVID_TOP_DIR)/video/provider/cnm/decoder/vdi/linux/vdi.c
 VDI_OSAL_C      = $(BMVID_TOP_DIR)/video/provider/cnm/decoder/vdi/linux/vdi_osal.c
 VDI_OSAL_O      = vdi_osal.o
 MM_C            = $(BMVID_TOP_DIR)/video/provider/cnm/decoder/vdi/mm.c
 VDI_VPATH       = $(BMVID_TOP_DIR)/video/provider/cnm/decoder/vdi/linux
 
-PLATFORM_FLAGS  = 
+PLATFORM_FLAGS  =
 
 ifeq ("$(BUILD_CONFIGURATION)", "NonOS")
     CROSS_CC_PREFIX = aarch64-elf-
@@ -177,6 +177,9 @@ endif
 ifeq ($(PRODUCTFORM),pcie_mips64)
     CFLAGS     += -mips64r2 -mabi=64 -march=gs464e -D_GLIBCXX_USE_CXX11_ABI=0
 endif
+ifeq ($(PRODUCTFORM),pcie_sw64)
+    CFLAGS += --sysroot=$(CMAKE_SYSROOT)
+endif
 
 CC  = $(CROSS_CC_PREFIX)gcc
 CXX = $(CROSS_CC_PREFIX)g++
@@ -202,7 +205,7 @@ CFLAGS += -DSLT_TEST
 endif
 
 ifeq ($(DEBUG), 0)
-CFLAGS += 
+CFLAGS +=
 else ifeq ($(DEBUG), 1)
 CFLAGS += -g -O0
 endif
@@ -312,21 +315,27 @@ SOURCES_COMMON =main_helper.c                   vpuhelper.c                 bits
 
 ifeq ("$(BUILD_CONFIGURATION)", "EmbeddedLinux")
 SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/bm_video_interface.c
+SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/log.c
 endif
 ifeq ("$(BUILD_CONFIGURATION)", "NativeLinux")
 SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/bm_video_interface.c
+SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/log.c
 endif
 ifeq ("$(BUILD_CONFIGURATION)", "MipsLinux")
 SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/bm_video_interface.c
+SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/log.c
 endif
 ifeq ("$(BUILD_CONFIGURATION)", "LoongLinux")
 SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/bm_video_interface.c
+SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/log.c
 endif
 ifeq ("$(BUILD_CONFIGURATION)", "SunwayLinux")
 SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/bm_video_interface.c
+SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/log.c
 endif
 ifeq ("$(BUILD_CONFIGURATION)", "RiscvLinux")
 SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/bm_video_interface.c
+SOURCES_COMMON += $(BMVID_TOP_DIR)/video/decoder/bm_dec_api/src/log.c
 endif
 
 
@@ -349,7 +358,7 @@ VPATH2=$(patsubst %,-I%,$(subst :, ,$(VPATH)))
 OBJECTNAMES_COMMON=$(patsubst %.S,%.o,$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCES_COMMON))))
 OBJECTPATHS_COMMON=$(addprefix $(OBJDIR)/,$(notdir $(OBJECTNAMES_COMMON)))
 
-OBJECTNAMES_DECTEST=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCES_DECTEST))) 
+OBJECTNAMES_DECTEST=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(SOURCES_DECTEST)))
 OBJECTPATHS_DECTEST=$(addprefix $(OBJDIR)/,$(notdir $(OBJECTNAMES_DECTEST))) $(OBJECTPATHS_COMMON)
 
 -include $(BMVID_ROOT)/build/version.mak

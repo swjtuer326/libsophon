@@ -21,7 +21,7 @@
 using namespace std;
 typedef unsigned char u8;
 
-extern void bm1684x_vpp_write_bin(bm_image dst, const char *output_name);
+extern void bm_write_bin(bm_image dst, const char *output_name);
 static void img_len(bm_image_format_ext format,
                     int h, int w,
                     int *height, int *width) {
@@ -509,7 +509,7 @@ static int test_rectangle_random(bm_handle_t handle,
         goto exit;
     }
 #if FILL_RECT_DEBUG
-    bm1684x_vpp_write_bin(image, fn);
+    bm_write_bin(image, fn);
 #endif
     bm_image_copy_device_to_host(image, (void **)hw_rslt);
 

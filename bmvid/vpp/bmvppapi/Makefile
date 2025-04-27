@@ -52,6 +52,7 @@ LDLIBS += -lm -lstdc++
 endif
 
 ifeq ($(PRODUCTFORM), pcie_sw64)
+CFLAGS += --sysroot=$(CMAKE_SYSROOT)
 LDFLAGS +=
 LDLIBS += -lstdc++
 endif

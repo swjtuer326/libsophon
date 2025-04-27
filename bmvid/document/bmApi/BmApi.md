@@ -2,46 +2,48 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **目录**
 
-- [一、 bm\_video Decode 数据结构 \& API说明](#一-bm_video-decode-数据结构--api说明)
-  - [bm\_video Decode 数据结构](#bm_video-decode-数据结构)
-    - [1. BmVpuDecStreamFormat](#1-BmVpuDecStreamFormat)
-    - [2. BmVpuDecSkipMode](#2-BmVpuDecSkipMode)
-    - [3. BmVpuDecDMABuffer](#3-BmVpuDecDMABuffer)
-    - [4. BmVpuDecOutputMapType](#-BmVpuDecOutputMapType)
-    - [5. BmVpuDecBitStreamMode](#6-BmVpuDecBitStreamMode)
-    - [6. BmVpuDecPixFormat](#7-BmVpuDecPixFormat)
-    - [7. BMVidDecParam](#8-BMVidDecParam)
-    - [8. BMDecStatus](#9-BMDecStatus)
-    - [9. BMDecOutputMapType](#10-BMDecOutputMapType)
-    - [10. BMVidStream](#11-BMVidStream)
-    - [11. BMVidFrame](#12-BMVidFrame)
-    - [12. BMVidStreamInfo](#13-BMVidStreamInfo)
-    - [13. BmVpuDecPicType](#14-BmVpuDecPicType)
-  - [bm\_video Decode API说明](#bm_video-decode-api说明)
-    - [1. bmvpu\_dec\_create](#1-bmvpu_dec_create)
-    - [2. bmvpu\_dec\_get\_status](#2-bmvpu_dec_get_status)
-    - [3. bmvpu\_dec\_decode](#3-bmvpu_dec_decode)
-    - [4. bmvpu\_dec\_get\_caps](#4-bmvpu_dec_get_caps)
-    - [5. bmvpu\_dec\_get\_output](#5-bmvpu_dec_get_output)
-    - [6. bmvpu\_dec\_clear\_output](#6-bmvpu_dec_clear_output)
-    - [7. bmvpu\_dec\_flush](#7-bmvpu_dec_flush)
-    - [8. bmvpu\_dec\_delete](#8-bmvpu_dec_delete)
-    - [9. bmvpu\_dec\_get\_stream\_buffer\_empty\_size](#9-bmvpu_dec_get_stream_buffer_empty_size)
-    - [10. bmvpu\_dec\_all\_frame\_in\_buffer](#10-bmvpu_dec_all_frame_in_buffer)
-    - [11. bmvpu\_dec\_get\_empty\_input\_buffer\_cnt](#11-bmvpu_dec_get_empty_input_buffer_cnt)
-    - [12. bmvpu\_dec\_get\_pkt\_in\_buf\_count](#12-bmvpu_dec_get_pkt_in_buf_count)
-    - [13. bmvpu\_dec\_reset](#13-bmvpu_dec_reset)
-    - [14. bmvpu\_dec\_get\_core\_idx](#14-bmvpu_dec_get_core_idx)
-    - [15. bmvpu\_dec\_dump\_stream](#15-bmvpu_dec_dump_stream)
-    - [16. bmvpu\_dec\_get\_inst\_idx](#16-bmvpu_dec_get_inst_idx)
-    - [17. bmvpu\_dec\_get\_stream\_info](#17-bmvpu_dec_get_stream_info)
-    - [18. bmvpu\_dec\_set\_logging\_threshold](#18-bmvpu_dec_set_logging_threshold)
-  - [Frame Buffer 计算方法](#Frame-Buffer-计算方法)
-    - [1. compress frame data](#1.-compress-frame-data)
-    - [2. compress frame table](#2.-compress-frame-table)
-    - [3. linear frame buffer](#3.-linear-frame-buffer)
-- [二、 bm\_video Encode 数据结构 \& API说明](#二-bm_video-encode-数据结构--api说明)
-  - [bm\_video Encode 枚举类型](#bm_video-encode-枚举类型)
+- [一、 bm_video Decode 数据结构 & API说明](#%E4%B8%80-bm_video-decode-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84--api%E8%AF%B4%E6%98%8E)
+  - [bm_video Decode 数据结构](#bm_video-decode-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84)
+    - [1. BmVpuDecStreamFormat](#1-bmvpudecstreamformat)
+    - [2. BmVpuDecSkipMode](#2-bmvpudecskipmode)
+    - [3. BmVpuDecDMABuffer](#3-bmvpudecdmabuffer)
+    - [4. BmVpuDecOutputMapType](#4-bmvpudecoutputmaptype)
+    - [5. BmVpuDecBitStreamMode](#5-bmvpudecbitstreammode)
+    - [6. BmVpuDecPixFormat](#6-bmvpudecpixformat)
+    - [7. BMVidDecRetStatus](#7-bmviddecretstatus)
+    - [8. BMVidDecParam](#8-bmviddecparam)
+    - [9. BMDecStatus](#9-bmdecstatus)
+    - [10. BMDecOutputMapType](#10-bmdecoutputmaptype)
+    - [11. BMVidStream](#11-bmvidstream)
+    - [12.BMVidFrame](#12bmvidframe)
+    - [13.BMVidStreamInfo](#13bmvidstreaminfo)
+    - [14.BmVpuDecPicType](#14bmvpudecpictype)
+  - [bm_video Decode API说明](#bm_video-decode-api%E8%AF%B4%E6%98%8E)
+    - [1. bmvpu_dec_create](#1-bmvpu_dec_create)
+    - [2. bmvpu_dec_get_status](#2-bmvpu_dec_get_status)
+    - [3. bmvpu_dec_decode](#3-bmvpu_dec_decode)
+    - [4. bmvpu_dec_get_caps](#4-bmvpu_dec_get_caps)
+    - [5. bmvpu_dec_get_output](#5-bmvpu_dec_get_output)
+    - [6. bmvpu_dec_clear_output](#6-bmvpu_dec_clear_output)
+    - [7. bmvpu_dec_flush](#7-bmvpu_dec_flush)
+    - [8. bmvpu_dec_delete](#8-bmvpu_dec_delete)
+    - [9. bmvpu_dec_get_stream_buffer_empty_size](#9-bmvpu_dec_get_stream_buffer_empty_size)
+    - [10. bmvpu_dec_get_all_frame_in_buffer](#10-bmvpu_dec_get_all_frame_in_buffer)
+    - [11. bmvpu_dec_get_all_empty_input_buf_cnt](#11-bmvpu_dec_get_all_empty_input_buf_cnt)
+    - [12. bmvpu_dec_get_pkt_in_buf_count](#12-bmvpu_dec_get_pkt_in_buf_count)
+    - [13. bmvpu_dec_vpu_reset](#13-bmvpu_dec_vpu_reset)
+    - [14. bmvpu_dec_get_core_idx](#14-bmvpu_dec_get_core_idx)
+    - [15. bmvpu_dec_dump_stream](#15-bmvpu_dec_dump_stream)
+    - [16. bmvpu_get_inst_idx](#16-bmvpu_get_inst_idx)
+    - [17. bmvpu_dec_get_stream_info](#17-bmvpu_dec_get_stream_info)
+    - [18. bmvpu_dec_set_logging_threshold](#18-bmvpu_dec_set_logging_threshold)
+  - [Frame Buffer 计算方法](#frame-buffer-%E8%AE%A1%E7%AE%97%E6%96%B9%E6%B3%95)
+    - [1. frame buffer count](#1-frame-buffer-count)
+    - [2. compress frame data](#2-compress-frame-data)
+    - [3. compress frame table](#3-compress-frame-table)
+    - [4. linear frame buffer](#4-linear-frame-buffer)
+- [二、 bm_video Encode 数据结构 & API说明](#%E4%BA%8C-bm_video-encode-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84--api%E8%AF%B4%E6%98%8E)
+  - [bm_video Encode 枚举类型](#bm_video-encode-%E6%9E%9A%E4%B8%BE%E7%B1%BB%E5%9E%8B)
     - [1. BmVpuEncReturnCodes](#1-bmvpuencreturncodes)
     - [2. BmVpuEncOutputCodes](#2-bmvpuencoutputcodes)
     - [3. BmVpuEncHeaderDataTypes](#3-bmvpuencheaderdatatypes)
@@ -50,7 +52,7 @@
     - [6. BMVpuEncGopPreset](#6-bmvpuencgoppreset)
     - [7. BMVpuEncMode](#7-bmvpuencmode)
     - [8. BmVpuMappingFlags](#8-bmvpumappingflags)
-  - [bm\_video Encode 数据结构](#bm_video-encode-数据结构)
+  - [bm_video Encode 数据结构](#bm_video-encode-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84)
     - [1. BmVpuEncH264Params](#1-bmvpuench264params)
     - [2. BmVpuEncH265Params](#2-bmvpuench265params)
     - [3. BmVpuEncOpenParams](#3-bmvpuencopenparams)
@@ -63,74 +65,74 @@
     - [10. BmVpuEncDMABuffer](#10-bmvpuencdmabuffer)
     - [11. BmVpuRawFrame](#11-bmvpurawframe)
     - [12. BmVpuFramebuffer](#12-bmvpuframebuffer)
-  - [bm\_video Encode API](#bm_video-encode-api)
-    - [1. bmvpu\_enc\_error\_string](#1-bmvpu_enc_error_string)
-    - [2. bmvpu\_enc\_get\_core\_idx](#2-bmvpu_enc_get_core_idx)
-    - [3. bmvpu\_enc\_load](#3-bmvpu_enc_load)
-    - [4. bmvpu\_enc\_unload](#4-bmvpu_enc_unload)
-    - [5. bmvpu\_enc\_get\_bitstream\_buffer\_info](#5-bmvpu_enc_get_bitstream_buffer_info)
-    - [6. bmvpu\_enc\_set\_default\_open\_params](#6-bmvpu_enc_set_default_open_params)
-    - [7. bmvpu\_fill\_framebuffer\_params](#7-bmvpu_fill_framebuffer_params)
-    - [8. bmvpu\_enc\_open](#8-bmvpu_enc_open)
-    - [9. bmvpu\_enc\_close](#9-bmvpu_enc_close)
-    - [10. bmvpu\_enc\_encode](#10-bmvpu_enc_encode)
-    - [11. bmvpu\_enc\_dma\_buffer\_allocate](#11-bmvpu_enc_dma_buffer_allocate)
-    - [12. bmvpu\_enc\_dma\_buffer\_deallocate](#12-bmvpu_enc_dma_buffer_deallocate)
-    - [13. bmvpu\_enc\_dma\_buffer\_attach](#13-bmvpu_enc_dma_buffer_attach)
-    - [14. bmvpu\_enc\_dma\_buffer\_deattach](#14-bmvpu_enc_dma_buffer_deattach)
-    - [15. bmvpu\_dma\_buffer\_map](#15-bmvpu_dma_buffer_map)
-    - [16. bmvpu\_dma\_buffer\_unmap](#16-bmvpu_dma_buffer_unmap)
-    - [17. bmvpu\_enc\_dma\_buffer\_flush](#17-bmvpu_enc_dma_buffer_flush)
-    - [18. bmvpu\_enc\_dma\_buffer\_invalidate](#18-bmvpu_enc_dma_buffer_invalidate)
-    - [19. bmvpu\_enc\_dma\_buffer\_get\_physical\_address](#19-bmvpu_enc_dma_buffer_get_physical_address)
-    - [20. bmvpu\_enc\_dma\_buffer\_get\_size](#20-bmvpu_enc_dma_buffer_get_size)
-    - [21. bmvpu\_enc\_upload\_data](#21-bmvpu_enc_upload_data)
-    - [22. bmvpu\_enc\_download\_data](#22-bmvpu_enc_download_data)
-- [三、 JPU通用结构体](#三-jpu通用结构体)
-  - [JPU枚举类型](#jpu枚举类型)
+  - [bm_video Encode API](#bm_video-encode-api)
+    - [1. bmvpu_enc_error_string](#1-bmvpu_enc_error_string)
+    - [2. bmvpu_enc_get_core_idx](#2-bmvpu_enc_get_core_idx)
+    - [3. bmvpu_enc_load](#3-bmvpu_enc_load)
+    - [4. bmvpu_enc_unload](#4-bmvpu_enc_unload)
+    - [5. bmvpu_enc_get_bitstream_buffer_info](#5-bmvpu_enc_get_bitstream_buffer_info)
+    - [6. bmvpu_enc_set_default_open_params](#6-bmvpu_enc_set_default_open_params)
+    - [7. bmvpu_fill_framebuffer_params](#7-bmvpu_fill_framebuffer_params)
+    - [8. bmvpu_enc_open](#8-bmvpu_enc_open)
+    - [9. bmvpu_enc_close](#9-bmvpu_enc_close)
+    - [10. bmvpu_enc_encode](#10-bmvpu_enc_encode)
+    - [11. bmvpu_enc_dma_buffer_allocate](#11-bmvpu_enc_dma_buffer_allocate)
+    - [12. bmvpu_enc_dma_buffer_deallocate](#12-bmvpu_enc_dma_buffer_deallocate)
+    - [13. bmvpu_enc_dma_buffer_attach](#13-bmvpu_enc_dma_buffer_attach)
+    - [14. bmvpu_enc_dma_buffer_deattach](#14-bmvpu_enc_dma_buffer_deattach)
+    - [15. bmvpu_dma_buffer_map](#15-bmvpu_dma_buffer_map)
+    - [16. bmvpu_dma_buffer_unmap](#16-bmvpu_dma_buffer_unmap)
+    - [17. bmvpu_enc_dma_buffer_flush](#17-bmvpu_enc_dma_buffer_flush)
+    - [18. bmvpu_enc_dma_buffer_invalidate](#18-bmvpu_enc_dma_buffer_invalidate)
+    - [19. bmvpu_enc_dma_buffer_get_physical_address](#19-bmvpu_enc_dma_buffer_get_physical_address)
+    - [20. bmvpu_enc_dma_buffer_get_size](#20-bmvpu_enc_dma_buffer_get_size)
+    - [21. bmvpu_enc_upload_data](#21-bmvpu_enc_upload_data)
+    - [22. bmvpu_enc_download_data](#22-bmvpu_enc_download_data)
+- [三、 JPU通用结构体](#%E4%B8%89-jpu%E9%80%9A%E7%94%A8%E7%BB%93%E6%9E%84%E4%BD%93)
+  - [JPU枚举类型](#jpu%E6%9E%9A%E4%B8%BE%E7%B1%BB%E5%9E%8B)
     - [1. BmJpuLogLevel](#1-bmjpuloglevel)
     - [2. BmJpuImageFormat](#2-bmjpuimageformat)
     - [3. BmJpuColorFormat](#3-bmjpucolorformat)
     - [4. BmJpuChromaFormat](#4-bmjpuchromaformat)
     - [5. BmJpuRotateAngle](#5-bmjpurotateangle)
     - [6. BmJpuMirrorDirection](#6-bmjpumirrordirection)
-  - [JPU通用结构体](#jpu通用结构体)
+  - [JPU通用结构体](#jpu%E9%80%9A%E7%94%A8%E7%BB%93%E6%9E%84%E4%BD%93)
     - [1. BmJpuFramebuffer](#1-bmjpuframebuffer)
     - [2. BmJpuFramebufferSizes](#2-bmjpuframebuffersizes)
     - [3. BmJpuRawFrame](#3-bmjpurawframe)
-- [四、 jpeg Decode 数据结构 \& API说明](#四-jpeg-decode-数据结构--api说明)
-  - [jpeg Decode 结构体](#jpeg-decode-结构体)
+- [四、 jpeg Decode 数据结构 & API说明](#%E5%9B%9B-jpeg-decode-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84--api%E8%AF%B4%E6%98%8E)
+  - [jpeg Decode 结构体](#jpeg-decode-%E7%BB%93%E6%9E%84%E4%BD%93)
     - [1. BmJpuJPEGDecInfo](#1-bmjpujpegdecinfo)
     - [2. BmJpuJPEGDecoder](#2-bmjpujpegdecoder)
     - [3. BmJpuDecOpenParams](#3-bmjpudecopenparams)
     - [4. BmJpuDecInitialInfo](#4-bmjpudecinitialinfo)
     - [5. BmJpuDecReturnCodes](#5-bmjpudecreturncodes)
   - [jpeg Decode API](#jpeg-decode-api)
-    - [1. bm\_jpu\_dec\_load](#1-bm_jpu_dec_load)
-    - [2. bm\_jpu\_jpeg\_dec\_open](#2-bm_jpu_jpeg_dec_open)
-    - [3. bm\_jpu\_jpeg\_dec\_decode](#3-bm_jpu_jpeg_dec_decode)
-    - [4. bm\_jpu\_jpeg\_dec\_get\_info](#4-bm_jpu_jpeg_dec_get_info)
-    - [5. bm\_jpu\_jpeg\_dec\_frame\_finished](#5-bm_jpu_jpeg_dec_frame_finished)
-    - [6. bm\_jpu\_jpeg\_dec\_close](#6-bm_jpu_jpeg_dec_close)
-    - [7. bm\_jpu\_dec\_unload](#7-bm_jpu_dec_unload)
-    - [8. bm\_jpu\_calc\_framebuffer\_sizes](#8-bm_jpu_calc_framebuffer_sizes)
-    - [9. bm\_jpu\_dec\_error\_string](#9-bm_jpu_dec_error_string)
-    - [10. bm\_jpu\_dec\_get\_bm\_handle](#10-bm_jpu_dec_get_bm_handle)
-    - [11. bm\_jpu\_jpeg\_dec\_flush](#11-bm_jpu_jpeg_dec_flush)
-- [五、 jpeg Encode 数据结构 \& API说明](#五-jpeg-encode-数据结构--api说明)
-  - [jpeg Encode 结构体](#jpeg-encode-结构体)
+    - [1. bm_jpu_dec_load](#1-bm_jpu_dec_load)
+    - [2. bm_jpu_jpeg_dec_open](#2-bm_jpu_jpeg_dec_open)
+    - [3. bm_jpu_jpeg_dec_decode](#3-bm_jpu_jpeg_dec_decode)
+    - [4. bm_jpu_jpeg_dec_get_info](#4-bm_jpu_jpeg_dec_get_info)
+    - [5. bm_jpu_jpeg_dec_frame_finished](#5-bm_jpu_jpeg_dec_frame_finished)
+    - [6. bm_jpu_jpeg_dec_close](#6-bm_jpu_jpeg_dec_close)
+    - [7. bm_jpu_dec_unload](#7-bm_jpu_dec_unload)
+    - [8. bm_jpu_calc_framebuffer_sizes](#8-bm_jpu_calc_framebuffer_sizes)
+    - [9. bm_jpu_dec_error_string](#9-bm_jpu_dec_error_string)
+    - [10. bm_jpu_dec_get_bm_handle](#10-bm_jpu_dec_get_bm_handle)
+    - [11. bm_jpu_jpeg_dec_flush](#11-bm_jpu_jpeg_dec_flush)
+- [五、 jpeg Encode 数据结构 & API说明](#%E4%BA%94-jpeg-encode-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84--api%E8%AF%B4%E6%98%8E)
+  - [jpeg Encode 结构体](#jpeg-encode-%E7%BB%93%E6%9E%84%E4%BD%93)
     - [1. BmJpuJPEGEncParams](#1-bmjpujpegencparams)
     - [2. BmJpuJPEGEncoder](#2-bmjpujpegencoder)
     - [3. BmJpuEncInitialInfo](#3-bmjpuencinitialinfo)
     - [4. BmJpuEncReturnCodes](#4-bmjpuencreturncodes)
   - [jpeg Encode API](#jpeg-encode-api)
-    - [1. bm\_jpu\_enc\_load](#1-bm_jpu_enc_load)
-    - [2. bm\_jpu\_jpeg\_enc\_open](#2-bm_jpu_jpeg_enc_open)
-    - [3. bm\_jpu\_jpeg\_enc\_encode](#3-bm_jpu_jpeg_enc_encode)
-    - [4. bm\_jpu\_jpeg\_enc\_close](#4-bm_jpu_jpeg_enc_close)
-    - [5. bm\_jpu\_enc\_unload](#5-bm_jpu_enc_unload)
-    - [6. bm\_jpu\_enc\_error\_string](#6-bm_jpu_enc_error_string)
-    - [7. bm\_jpu\_enc\_get\_bm\_handle](#7-bm_jpu_enc_get_bm_handle)
+    - [1. bm_jpu_enc_load](#1-bm_jpu_enc_load)
+    - [2. bm_jpu_jpeg_enc_open](#2-bm_jpu_jpeg_enc_open)
+    - [3. bm_jpu_jpeg_enc_encode](#3-bm_jpu_jpeg_enc_encode)
+    - [4. bm_jpu_jpeg_enc_close](#4-bm_jpu_jpeg_enc_close)
+    - [5. bm_jpu_enc_unload](#5-bm_jpu_enc_unload)
+    - [6. bm_jpu_enc_error_string](#6-bm_jpu_enc_error_string)
+    - [7. bm_jpu_enc_get_bm_handle](#7-bm_jpu_enc_get_bm_handle)
   - [jpeg Encode Callback](#jpeg-encode-callback)
     - [1. BmJpuEncAcquireOutputBuffer](#1-bmjpuencacquireoutputbuffer)
     - [2. BmJpuEncFinishOutputBuffer](#2-bmjpuencfinishoutputbuffer)
@@ -786,12 +788,38 @@ BMVidDecParam 用于设置解码器的初始化参数，在调用接口 bmvpu_de
 
 ## Frame Buffer 计算方法
 
-### 1. compress frame data
+### 1. frame buffer count
+
+解码器的 frame buffer 分为两种，compress frame 和 linear frame。所需要的 frame buffer 的数量和种类由输入码流和解码器输出数据的类型（wtlFormat）决定。
+解码器的输出数据类型通过 BMVidDecParam 的 wtlFormat 参数来设置。
+
+
+（1）压缩模式（BMDEC_OUTPUT_COMPRESSED）
+
+
+压缩模式下，只需要申请 compress frame data 和 compress frame table。
+
+
+（2）YUV模式（BMDEC_OUTPUT_UNMAP）
+
+
+YUV模式下，既需要申请 compress frame data 和 compress frame table 也需要申请 linear frame buffer。
+
+
+### 2. compress frame data
 
 (1) buffer count
+
+
 compress frame 的 count 由 minFrameBufferCount 和 extraFrameBufferCount 来决定
 
+压缩模式
+
 `compressedFbCount =  minFrameBufferCount +  extraFrameBufferCount`
+
+YUV模式，若压缩数据不需要用于后续处理，compressedFbCount 可以缩减
+
+`compressedFbCount =  minFrameBufferCount`
 
 其中 extraFrameBufferCount 由用户指定，数量必须大于0。
 - Frame Buffer 通过 sdk 内部分配，此参数有默认值为 5，若用户不指定该参数，则按照默认参数来分配
@@ -803,6 +831,8 @@ minFrameBufferCount 因码流而异，是 VPU 解码需要的 Frame Buffer 最�
 
 
 (2) buffer size
+
+
 定义 ALIGN_xx（）表示进行 xx 字节对齐。如 ALIGN_16（）表示进行 16字节对齐。
 compress frame 的 size 由 图像的宽高决定，具体计算方法如下
 
@@ -816,9 +846,11 @@ compress frame 的 size 由 图像的宽高决定，具体计算方法如下
 
 `FramebufSize = LumaSize + ChromaSize`
 
-### 2. compress frame table
+### 3. compress frame table
 
 (1) buffer count
+
+
 table 的数量和 compress frame 匹配，计算方法参考 compress frame data。
 
 (2) buffer size
@@ -831,17 +863,21 @@ table 的数量和 compress frame 匹配，计算方法参考 compress frame dat
 
 `CtableBufferSize = ALIGN_4096(CtableBufferSize) + 4096`
 
-### 3. linear frame buffer
+### 4. linear frame buffer
 
 (1) buffer count
+
+
 linear frame 的 count 由 frameBufDelay 和 extraFrameBufferCount 决定。
 
 `linearFbCount = frameBufDelay + extraFrameBufferCount + 1`
 
-- 对于 HEVC 码流， frameBufDelay 由 VPS 参数中的 num_reorder_pics参数决定， frameBufDelay = vps_max_num_reorder_pics + 2
-- 对于 AVC 码流，frameBufDelay 由 num_reorder_frames 参数决定， frameBufDelay = num_reorder_frames + 2
+- 对于 HEVC 码流， frameBufDelay 由 VPS 参数中的 num_reorder_pics参数决定， frameBufDelay = vps_max_num_reorder_pics + 1
+- 对于 AVC 码流，frameBufDelay 由 num_reorder_frames 参数决定， frameBufDelay = num_reorder_frames + 1
 
 (2) buffer size
+
+
 stride 的对齐方式和 compress frame 一致, height 不进行对齐
 
 `LumaSize = stride * height`

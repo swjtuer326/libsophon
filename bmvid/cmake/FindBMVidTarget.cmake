@@ -87,6 +87,10 @@ function(ADD_TARGET_ION_LIB target_name chip_name platform subtype debug ion com
     set(ION_LIB_TARGET ${out_abs_path}/lib/libbmion.so)
     set(ION_HEADER_TARGET ${out_abs_path}/include)
     set(ION_APP_TARGET ${out_abs_path}/bin)
+    if(CROSS_COMPILE)
+        set(CROSS_OPT CROSS_CC_PREFIX=${CROSS_COMPILE}
+            CMAKE_SYSROOT=${CMAKE_SYSROOT})
+    endif()
 
     add_custom_command(OUTPUT ${ION_LIB_TARGET}
         COMMAND make clean CHIP=${chip_name} PRODUCTFORM=${platform}
@@ -96,6 +100,7 @@ function(ADD_TARGET_ION_LIB target_name chip_name platform subtype debug ion com
             PRODUCTFORM=${platform}
             BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
             INSTALL_DIR=${out_abs_path}
+            ${CROSS_OPT}
         COMMAND make install
             CHIP=${chip_name}
             DEBUG=${debug}
@@ -134,6 +139,10 @@ function(ADD_TARGET_JPU_LIB target_name chip_name platform subtype debug ion com
     set(JPU_BINARY_HEADER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/jpeg/binary/${platform}/include)
     set(JPU_BINARY_APP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/jpeg/binary/${platform}/bin)
     set(JPU_BINARY_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/jpeg/binary/${platform}/lib)
+    if(CROSS_COMPILE)
+        set(CROSS_OPT CROSS_CC_PREFIX=${CROSS_COMPILE}
+            CMAKE_SYSROOT=${CMAKE_SYSROOT})
+    endif()
 
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/jpeg/driver/bmjpulite AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/jpeg/driver/bmjpuapi)
         # build from source code
@@ -146,6 +155,7 @@ function(ADD_TARGET_JPU_LIB target_name chip_name platform subtype debug ion com
                 PRODUCTFORM=${platform}
                 BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
                 INSTALL_DIR=${out_abs_path}
+                ${CROSS_OPT}
             COMMAND make install
                 CHIP=${chip_name}
                 DEBUG=${debug}
@@ -166,6 +176,7 @@ function(ADD_TARGET_JPU_LIB target_name chip_name platform subtype debug ion com
                 PRODUCTFORM=${platform}
                 BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
                 INSTALL_DIR=${out_abs_path}
+                ${CROSS_OPT}
             COMMAND make install
                 CHIP=${chip_name}
                 DEBUG=${debug}
@@ -186,9 +197,9 @@ function(ADD_TARGET_JPU_LIB target_name chip_name platform subtype debug ion com
                            POST_BUILD
                            COMMENT "copy to binary"
                            COMMAND rm -rf ${JPU_BINARY_LIB_PATH}
-                           COMMAND mkdir -p ${JPU_BINARY_LIB_PATH} && cp -rd ${JPU_LIB_TARGET}/libbmjpuapi.* ${JPU_LIB_TARGET}/libbmjpulite.* ${JPU_BINARY_LIB_PATH}/
+                           COMMAND mkdir -p ${JPU_BINARY_LIB_PATH} && cp -rd ${JPU_LIB_TARGET}/*jpu* ${JPU_BINARY_LIB_PATH}/
                            COMMAND rm -rf ${JPU_BINARY_HEADER_PATH}
-                           COMMAND mkdir -p ${JPU_BINARY_HEADER_PATH} && cp -rd ${JPU_HEADER_TARGET}/bm_jpeg_interface.h ${JPU_BINARY_HEADER_PATH}/
+                           COMMAND mkdir -p ${JPU_BINARY_HEADER_PATH} && cp -rd ${JPU_HEADER_TARGET}/*jpu* ${JPU_BINARY_HEADER_PATH}/
                            COMMAND rm -rf ${JPU_BINARY_APP_PATH}
                            COMMAND mkdir -p ${JPU_BINARY_APP_PATH} && cp -rd ${JPU_APP_TARGET}/bmjpeg* ${JPU_BINARY_APP_PATH}/)
     else()
@@ -237,6 +248,10 @@ function(ADD_TARGET_VPU_LIB target_name chip_name platform subtype debug ion com
     set(VPUENC_APP_TARGET ${out_abs_path}/bin/w5_enc_test)
     set(VPU_HEADER_TARGET ${out_abs_path}/include)
     set(VPU_APP_TARGET  ${out_abs_path}/bin)
+    if(CROSS_COMPILE)
+        set(CROSS_OPT CROSS_CC_PREFIX=${CROSS_COMPILE}
+            CMAKE_SYSROOT=${CMAKE_SYSROOT})
+    endif()
 
     if(${chip_name} STREQUAL "bm1684")
         set(VPU_DEC_FW_LIST chagall_dec.bin)
@@ -266,7 +281,8 @@ function(ADD_TARGET_VPU_LIB target_name chip_name platform subtype debug ion com
                 SUBTYPE=${subtype}
                 ION=${ion}
                 BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
-                DEBUG=${debug})
+                DEBUG=${debug}
+                ${CROSS_OPT})
 
     add_custom_command(OUTPUT ${VPUDEC_LIB_TARGET} ${VPU_DEC_FW_TARGET}
         COMMAND make clean
@@ -464,6 +480,10 @@ function(ADD_TARGET_VPP_LIB target_name chip_name platform subtype debug ion com
     set(VPP_LIB2_TARGET ${out_abs_path}/lib/libbmvppapi.so)
     set(TARGET_DEPEND_OBJ ${VPP_LIB_TARGET} ${VPP_ALIB_TARGET} ${VPP_APP_TARGET}/vpp_resize)
     set(VPP_LIBS_TARGET ${VPP_LIB_TARGET})
+    if(CROSS_COMPILE)
+        set(CROSS_OPT CROSS_CC_PREFIX=${CROSS_COMPILE}
+            CMAKE_SYSROOT=${CMAKE_SYSROOT})
+    endif()
 
     if (${platform} STREQUAL "pcie_mips64")
         set(CONFIG mipsLinux)
@@ -489,7 +509,8 @@ function(ADD_TARGET_VPP_LIB target_name chip_name platform subtype debug ion com
     set(MAKE_OPT CHIP=${chip_name}
                 SUBTYPE=${subtype}
                 BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
-                DEBUG=${debug})
+                DEBUG=${debug}
+                ${CROSS_OPT})
     add_custom_command(OUTPUT ${VPP_LIB_TARGET} ${VPP_ALIB_TARGET}
         COMMAND make -f makefile_lib.mak clean
             BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
@@ -573,7 +594,7 @@ function(ADD_TARGET_VPP_LIB target_name chip_name platform subtype debug ion com
 
 endfunction(ADD_TARGET_VPP_LIB)
 
-function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion component out_abs_path jpu_abs_path vpp_abs_path ion_abs_path)
+function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion component out_abs_path jpu_abs_path vpp_abs_path ion_abs_path using_openblas)
     if (NOT ${chip_name} STREQUAL "bm1684")
         message(WARNING "bmcv is unavailable for bm1682")
     else()
@@ -584,6 +605,10 @@ function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion co
         set(BMCV_APP_TARGET ${out_abs_path}/bin)
         set(BMCV_CPU_LIB_TARGET ${out_abs_path}/lib/libbmcv_cpu_func.so)
         set(BMCV_VPP_CMODEL_LIB_TARGET ${out_abs_path}/lib/libvpp_cmodel.so)
+        if(CROSS_COMPILE)
+            set(CROSS_OPT CROSS_COMPILE=${CROSS_COMPILE}
+                CMAKE_SYSROOT=${CMAKE_SYSROOT})
+        endif()
 
         SET(BMCV_LIBS_TARGET ${BMCV_LIB_TARGET})
         if(NOT ${platform} STREQUAL "soc")
@@ -595,7 +620,8 @@ function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion co
                 PRODUCTFORM=${platform}
                 SUBTYPE=${subtype}
                 DEBUG=${debug}
-                BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR})
+                BMVID_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+                ${CROSS_OPT})
         if(${subtype} STREQUAL "cmodel")
             set(MAKE_OPT ${MAKE_OPT} USING_CMODEL=1)
         endif()
@@ -603,6 +629,19 @@ function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion co
         if(BMCPU_CROSS_COMPILE STREQUAL "BMCPU_CROSS_COMPILE-NOTFOUND")
             message(ERROR "Add aarch64 linux toolchain to PATH! BMCV function on bmcpu requires it.")
     endif()
+        if (${using_openblas})
+            if (${platform} STREQUAL "pcie")
+                set(PATH_OPENBLAS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/OpenBLAS/x86)
+            elseif (${platform} STREQUAL "arm")
+                set(PATH_OPENBLAS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/OpenBLAS/arm)
+            else()
+                message(ERROR "Unspported PLATFROM")
+            endif()
+            add_custom_command(
+                OUTPUT ${out_abs_path}/lib/libopenblas.so*
+                COMMAND cp ${PATH_OPENBLAS}/libopenblas.so* ${out_abs_path}/lib/
+            )
+        endif()
         add_custom_command(OUTPUT ${BMCV_LIBS_TARGET} ${BMCV_ALIB_TARGET}
             COMMAND make clean ${MAKE_OPT}
                 BMCPU_CROSS_COMPILE=${BMCPU_CROSS_COMPILE}
@@ -611,6 +650,7 @@ function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion co
                 BMCPU_CROSS_COMPILE=${BMCPU_CROSS_COMPILE}
                 JPU_DIR=${jpu_abs_path}
                 VPP_DIR=${vpp_abs_path}
+                OPENBLAS_DIR=${out_abs_path}/lib/
                 OUT_DIR=./release
             COMMAND cp -aprf ./release/bmcv/* ${out_abs_path}
             COMMAND make clean ${MAKE_OPT}
@@ -628,6 +668,7 @@ function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion co
                 VPP_DIR=${vpp_abs_path}
                 BMCV_DIR=${out_abs_path}
                 BMION_DIR=${ion_abs_path}
+                OPENBLAS_DIR=${out_abs_path}/lib/
                 OUT_DIR=./release -j4
             COMMAND cp -apf ./release/bmcv/test/* ${out_abs_path}/bin
             COMMAND make clean_test ${MAKE_OPT}
@@ -655,6 +696,12 @@ function(ADD_TARGET_BMCV_LIB target_name chip_name platform subtype debug ion co
                 COMPONENT ${component}
                 FILES_MATCHING
                 PATTERN ${BMCV_CPU_LIB_FILENAME}*)
+        endif()
+        if (${using_openblas})
+          install(FILES ${out_abs_path}/lib/libopenblas.so ${out_abs_path}/lib/libopenblas.so.0
+              DESTINATION lib
+              PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+              COMPONENT ${component})
         endif()
         install(FILES ${BMCV_ALIB_TARGET}
             DESTINATION lib

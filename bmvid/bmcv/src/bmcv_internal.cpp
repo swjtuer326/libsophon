@@ -36,9 +36,22 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #else
 #define DLLEXPORT __attribute__((visibility("default")))
 #endif
-#define COMMIT_HASH "3cb9ecce6b778c1dd716fc675504903c43f66b60"
-#define BRANCH_NAME "(头指针分离于 origin/release)"
+#define COMMIT_HASH "9bfb06c6"
+#define BRANCH_NAME "HEAD"
+#define COMMIT_COUNT "2316"
 #define FIRMWARE_NAME "libbm1684x_kernel_module.so"
+
+const  char* fw_fname = FIRMWARE_NAME;
+#ifdef _WIN32
+#include <Windows.h>
+static INIT_ONCE fw_path_once = INIT_ONCE_STATIC_INIT;
+static char fw_path[512] = {0};
+static int fw_path_status = -1;
+#else
+static pthread_once_t fw_path_once = PTHREAD_ONCE_INIT;
+static char fw_path[512] = {0};
+static int fw_path_status = -1;
+#endif
 
 bm_status_t sg_malloc_device_mem(bm_handle_t handle, sg_device_mem_st *pmem, unsigned int size) {
     if (BM_SUCCESS != bm_malloc_device_byte(handle, &(pmem->bm_device_mem), size)) {
@@ -224,7 +237,7 @@ static std::map<std::pair<bm_image_format_ext, bm_image_format_ext>, vpp_limitat
 extern "C" {
     //__attribute__((visibility("default")))
     DLLEXPORT const char* libbmcv_version() {
-        static const char* version_string = "libbmcv_version:1.0.0, branch:" BRANCH_NAME ", commit:" COMMIT_HASH ", compiled on " __DATE__ " at " __TIME__", ";
+        static const char* version_string = "libbmcv_version:1.0.0, branch:" BRANCH_NAME ", minor version:" COMMIT_COUNT ", commit:" COMMIT_HASH ", compiled on " __DATE__ " at " __TIME__", ";
         return version_string;
     }
 }
@@ -277,7 +290,7 @@ int bm_image_zeros_soc(bm_image image)
     bm_mem_flush_device_mem(image.image_private->handle, &dmem);
     bm_mem_mmap_device_mem(image.image_private->handle, &dmem, &virt_addr);
     memset((void*)(uintptr_t)virt_addr, 0, total_size);
-    bm_mem_unmap_device_mem(image.image_private->handle, (void *)&virt_addr, total_size);
+    bm_mem_unmap_device_mem(image.image_private->handle, (void *)virt_addr, total_size);
     bm_mem_flush_device_mem(image.image_private->handle, &dmem);
     return 0;
 }
@@ -615,8 +628,9 @@ bm_status_t bm_image_mem_layout_adjust(bm_handle_t handle,
     return BM_SUCCESS;
 }
 
-int find_tpufirmaware_path(char fw_path[512], const char* path){
+int find_tpufirmaware_path(char fw_path[512], const char* name){
     char* ptr;
+    char cwd[512];
     int dirname_len;
     int ret = 0;
 #ifdef __linux__
@@ -624,24 +638,19 @@ int find_tpufirmaware_path(char fw_path[512], const char* path){
     const char* path1 = "/opt/sophon/libsophon-current/lib/tpu_module/";
 
     /* 1.test ./libbm1684x_kernel_module.so */
-    ret = access(path, F_OK);
-    if (ret == 0){
-        memset(fw_path, 0, 512);
-        strcpy(fw_path, path);
-        return ret;
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("getcwd() failed\n");
+        return -1;
     }
-
-    /* 2. test /system/data/lib/vpu_firmware/chagall.bin */
-    memset(fw_path, 0, 512);
-    strcpy(fw_path, path1);
-    strcat(fw_path, path);
+    strcpy(fw_path, cwd);
+    strcat(fw_path, "/");
+    strcat(fw_path, name);
     ret = access(fw_path, F_OK);
-    if (ret == 0)
-    {
+    if (ret == 0){
         return ret;
     }
 
-    /* 3.test libbmcv_so_path/libbm1684x_kernel_module.so */
+    /* 2.test libbmcv_so_path/libbm1684x_kernel_module.so */
     ret = dladdr((void*)find_tpufirmaware_path, &dl_info);
     if (ret == 0){
         printf("dladdr() failed: %s\n", dlerror());
@@ -666,9 +675,28 @@ int find_tpufirmaware_path(char fw_path[512], const char* path){
 
     memset(fw_path, 0, 512);
     strncpy(fw_path, dl_info.dli_fname, dirname_len);
-    strcat(fw_path, "tpu_module/");
-    strcat(fw_path, path);
+    strcat(fw_path, name);
+    ret = access(fw_path, F_OK);
+    if (ret == 0)
+    {
+        return ret;
+    }
 
+    /* 3.test libbmcv_so_path/tpu_module/libbm1684x_kernel_module.so */
+    memset(fw_path, 0, 512);
+    strncpy(fw_path, dl_info.dli_fname, dirname_len);
+    strcat(fw_path, "tpu_module/");
+    strcat(fw_path, name);
+    ret = access(fw_path, F_OK);
+    if (ret == 0)
+    {
+        return ret;
+    }
+
+    /* 4. test /opt/sophon/libsophon-current/lib/tpu_module/libbm1684x_kernel_module.so */
+    memset(fw_path, 0, 512);
+    strcpy(fw_path, path1);
+    strcat(fw_path, name);
     ret = access(fw_path, F_OK);
     return ret;
 #endif
@@ -702,7 +730,7 @@ int find_tpufirmaware_path(char fw_path[512], const char* path){
     memset(fw_path, 0, 512);
     strncpy(fw_path, strDLLPath1, dirname_len);
     strcat(fw_path, "tpu_module\\");
-    strcat(fw_path, path);
+    strcat(fw_path, name);
 
     free(strDLLPath1);
     ret = _access(fw_path, 0);
@@ -713,17 +741,32 @@ int find_tpufirmaware_path(char fw_path[512], const char* path){
 #endif
 }
 
+#ifdef _WIN32
+BOOL CALLBACK init_fw_path(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context) {
+    (void)InitOnce; (void)Parameter; (void)Context;
+    fw_path_status = find_tpufirmaware_path(fw_path, fw_fname);
+    return TRUE;
+}
+#else
+static void init_fw_path() {
+    fw_path_status = find_tpufirmaware_path(fw_path, fw_fname);
+}
+#endif
+
 bm_status_t bm_load_tpu_module(bm_handle_t handle, tpu_kernel_module_t *tpu_module){
-    const  char* fw_fname = FIRMWARE_NAME;
-    static char fw_path[512] = {0};
-    static bool first = true;
-    if(first){
-        if(0 != find_tpufirmaware_path(fw_path, fw_fname)){
-            printf("libbm1684x_kernel_module.so does not exist\n");
-            return BM_ERR_FAILURE;
-        }
-        first = false;
+#ifdef _WIN32
+    if (!InitOnceExecuteOnce(&fw_path_once, init_fw_path, NULL, NULL)) {
+        printf("Failed to initialize fw_path\n");
+        return BM_ERR_FAILURE;
     }
+#else
+    pthread_once(&fw_path_once, init_fw_path);
+#endif
+    if (fw_path_status != 0) {
+        printf("libbm1684x_kernel_module.so does not exist\n");
+        return BM_ERR_FAILURE;
+    }
+
     int key_size = strlen(FIRMWARE_NAME);
     *tpu_module = tpu_kernel_load_module_file_key(handle,
                                                  fw_path,
@@ -2206,5 +2249,3 @@ void data_type_conversion(bm_image_data_format_ext bmcv_data_type, int *tpu_data
       break;
     }
 }
-
-
