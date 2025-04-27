@@ -83,6 +83,7 @@ ifeq ($(PRODUCTFORM), pcie_loongarch64)
 endif
 
 ifeq ($(PRODUCTFORM), pcie_sw64)
+    CFLAGS += --sysroot=$(CMAKE_SYSROOT)
     LDLIBS += -lstdc++
 endif
 

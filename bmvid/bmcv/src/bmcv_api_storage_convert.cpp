@@ -7,6 +7,7 @@
 #include "bmcv_api_ext.h"
 #include "bmcv_internal.h"
 #include "bmcv_common_bm1684.h"
+#include "bm1684/bmcv_1684_vpp_internal.h"
 #include "bm1684x/bmcv_1684x_vpp_ext.h"
 
 #define IS_CS_YUV(a) (a == FORMAT_NV12 || a == FORMAT_NV21 || a == FORMAT_NV16 \
@@ -395,10 +396,10 @@ bm_status_t bmcv_image_storage_convert_(
                 }
                 continue;
             }
-            if (bmcv_image_vpp_csc_matrix_convert(handle, 1,
-                                                  input_[i], output_ + i,
-                                                  csc_type, nullptr,
-                                                  BMCV_INTER_LINEAR, &rect) != BM_SUCCESS) {
+            if (bm1684_vpp_csc_matrix_convert(handle, 1,
+                                            input_[i], output_ + i,
+                                            csc_type, nullptr,
+                                            BMCV_INTER_LINEAR, &rect, BMLIB_LOG_INFO) != BM_SUCCESS) {
                 bmlib_log("BMCV", BMLIB_LOG_INFO, "can't use vpp,  go through tpu path\n");
                 success = false;
                 break;

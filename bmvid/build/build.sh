@@ -1,6 +1,8 @@
 #!/bin/bash
 #set -x
 
+USING_OPENBLAS=1
+
 function build_ion_lib()
 {
     if [ $CHIP != bm1684 ]; then
@@ -867,11 +869,11 @@ function build_bmcv_lib()
     update_bmcv_commit_and_branch
     if [ -n "$1" ]; then
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
 
     else
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS OUT_DIR=${BMCV_OUTPUT_DIR}"
     fi
 
     MAKE_OPT="$MAKE_OPT CHIP=$CHIP PRODUCTFORM=$PRODUCTFORM SUBTYPE=$SUBTYPE DEBUG=$DEBUG BMCV_ROOT=${BMVID_TOP_DIR}"
@@ -916,10 +918,10 @@ function clean_bmcv_lib()
 
     if [ -n "$1" ]; then
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
     else
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS OUT_DIR=${BMCV_OUTPUT_DIR}"
     fi
     MAKE_OPT="$MAKE_OPT CHIP=$CHIP PRODUCTFORM=$PRODUCTFORM SUBTYPE=$SUBTYPE DEBUG=$DEBUG BMCV_ROOT=${BMVID_TOP_DIR}"
 
@@ -978,11 +980,11 @@ function build_bmcv_test()
 
     if [ -n "$1" ]; then
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
 
     else
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS OUT_DIR=${BMCV_OUTPUT_DIR}"
     fi
 
     BMCPU_TOOLCHAIN_PATH=$(dirname `which aarch64-linux-gnu-g++`) || {
@@ -1061,10 +1063,10 @@ function clean_bmcv_test()
 
     if [ -n "$1" ]; then
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS USING_CMODEL=$1 OUT_DIR=${BMCV_OUTPUT_DIR}"
     else
         BMCV_OUTPUT_DIR=${BMVID_OUTPUT_DIR}
-        MAKE_OPT="OUT_DIR=${BMCV_OUTPUT_DIR}"
+        MAKE_OPT="USING_OPENBLAS=$USING_OPENBLAS OUT_DIR=${BMCV_OUTPUT_DIR}"
     fi
     MAKE_OPT="$MAKE_OPT CHIP=$CHIP PRODUCTFORM=$PRODUCTFORM SUBTYPE=$SUBTYPE DEBUG=$DEBUG BMCV_ROOT=${BMVID_TOP_DIR}"
 
@@ -1098,14 +1100,17 @@ function update_bmcv_commit_and_branch()
         cd "$file_dir" || exit
 
         if git rev-parse --git-dir > /dev/null 2>&1; then
-            commit_hash=$(git log -1 --pretty=format:"%H")
-            branch_name=$(git branch --contains HEAD | sed -n '/\* /s///p')
+            commit_hash=$(git rev-parse --short HEAD)
+            branch_name=$(git rev-parse --abbrev-ref HEAD)
+            commit_count=$(git rev-list --count HEAD)
 
             sed -i "s|#define COMMIT_HASH .*|#define COMMIT_HASH \"$commit_hash\"|" "bmcv_internal.cpp"
             sed -i "s|#define BRANCH_NAME .*|#define BRANCH_NAME \"$branch_name\"|" "bmcv_internal.cpp"
+            sed -i "s|#define COMMIT_COUNT .*|#define COMMIT_COUNT \"$commit_count\"|" "bmcv_internal.cpp"
 
             echo "Commit hash $commit_hash has been written to $file_path"
             echo "Branch name $branch_name has been written to $file_path"
+            echo "Commit count $commit_count has been written to $file_path"
         else
             echo "This directory is not a git repository."
         fi

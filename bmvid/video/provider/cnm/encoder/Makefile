@@ -85,6 +85,10 @@ ifeq ($(PRODUCTFORM), pcie_loongarch64)
 LDFLAGS += -Wl,-melf64loongarch
 endif
 
+ifeq ($(PRODUCTFORM), pcie_sw64)
+CFLAGS += --sysroot=$(CMAKE_SYSROOT)
+endif
+
 TARGET_NAME=libbmvpulite.so
 TARGET=$(PRODUCTFORM)/$(TARGET_NAME)
 

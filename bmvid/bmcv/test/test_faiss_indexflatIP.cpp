@@ -719,11 +719,15 @@ int main(int argc, char* args[]) {
 
     int sort_cnt = rand() % 100 + 1;
     int database_vecs_num = rand() % 10000 + 1 + sort_cnt;
-    int query_vecs_num = rand() % 64 + 1;
+    int query_vecs_num = rand() % 50 + 1;
     int vec_dims = rand() % 256 + 1;
     int is_transpose = rand() % 2;
-    int input_dtype = rand() % 2 == 0? DT_FP32 : DT_FP16;
-    int output_dtype = rand() % 2 == 0? DT_FP32 : DT_FP16;
+    int input_dtype_num[] = {1, 3, 5};  //1-int 3-fp16 5-fp32
+    int output_dtype_num[] = {9, 3, 5};  //9-int 3-fp16 5-fp32
+    int dtype_size = sizeof(input_dtype_num) / sizeof(input_dtype_num[0]);
+    int rand_num = rand() % dtype_size;
+    int input_dtype = input_dtype_num[rand_num];
+    int output_dtype = output_dtype_num[rand_num];
 
     if (argc > 1) database_vecs_num = atoi(args[1]);
     if (argc > 2) query_vecs_num = atoi(args[2]);
@@ -737,10 +741,10 @@ int main(int argc, char* args[]) {
     std::cout << "database_num: " << database_vecs_num << std::endl;
     std::cout << "query_num:    " << query_vecs_num << std::endl;
     std::cout << "sort_count:   " << sort_cnt << std::endl;
-    std::cout << "data_dims:    " << vec_dims<< std::endl;
+    std::cout << "data_dims:    " << vec_dims << std::endl;
     std::cout << "transpose:    " << is_transpose << std::endl;
-    std::cout << "input_dtype:  " << (input_dtype == DT_FP32?"fp32":"fp16") << std::endl;
-    std::cout << "output_dtype: " << (output_dtype == DT_FP32?"fp32":"fp16") << std::endl;
+    std::cout << "input_dtype:  " << input_dtype << std::endl;
+    std::cout << "output_dtype: " << output_dtype << std::endl;
 
     if (input_dtype == DT_FP32) {
         if (BM_SUCCESS != faiss_indexflatIP_fp32_single_test(vec_dims, query_vecs_num, database_vecs_num, sort_cnt, is_transpose, input_dtype, output_dtype)) {

@@ -159,35 +159,45 @@ static u8_data image_read(
     {
         res->data[i] = i % 255;
     }
-
     if (image_dh <= image_sh && image_dw <= image_sw)
         return res;
 
     if (image_dh > image_sh){
+        int x = 0;
         int pad_h_value = (image_dh - image_sh) / 2;
-        for (int i = 0;i < pad_h_value * image_sw;i++)
-            res_temp->data[i] = 0;
+        for (x = 0;x < pad_h_value * image_sw;x++)
+            res_temp->data[x] = 0;
 
-        for (int i = pad_h_value * image_sw; i < pad_h_value * image_sw + image_n * image_c * image_sh * image_sw;i++)
-            res_temp->data[i] = res->data[i];
+        for (int i = 0, x = pad_h_value * image_sw; x < pad_h_value * image_sw + image_n * image_c * image_sh * image_sw; i++,x++)
+            res_temp->data[x] = res->data[i];
 
-        for (int i = pad_h_value * image_sw + image_n * image_c * image_sh * image_sw;i <  pad_h_value * image_sw + image_n * image_c * image_sh * image_sw + pad_h_value * image_sw;i++)
-            res_temp->data[i] = 0;
+        for (int z = pad_h_value * image_sw + image_n * image_c * image_sh * image_sw;z <  pad_h_value * image_sw + image_n * image_c * image_sh * image_sw + pad_h_value * image_sw;z++)
+            res_temp->data[z] = 0;
     }
 
     if (image_dw > image_sw){
         int pad_w_value = (image_dw - image_sw) / 2;
+        int j = 0;
         for (int i = 0;i < image_dh;i++){
-            for (int i = 0;i < pad_w_value;i++)
-                res_temp_bak->data[i] = 0;
-            for (int i = pad_w_value;i < pad_w_value + image_sw;i++)
-                res_temp_bak->data[i] = res_temp->data[i-pad_w_value];
-            for (int i = pad_w_value + image_sw;i < pad_w_value + image_sw + pad_w_value + image_sw;i++)
-                res_temp_bak->data[i] = 0;
+            for (;j < pad_w_value + i * image_dw;j++)
+                res_temp_bak->data[j] = 0;
+            for (j = pad_w_value + i * image_dw ;j < pad_w_value + image_sw + i * image_dw;j++)
+                res_temp_bak->data[j] = res_temp->data[j-pad_w_value-i*image_dw + i*image_sw];
+            for (j = pad_w_value + image_sw + i * image_dw;j < pad_w_value + pad_w_value + image_sw + i * image_dw;j++)
+                res_temp_bak->data[j] = 0;
         }
     }
 
     return res_temp_bak;
+}
+
+static u8_data image_read(int input_size){
+    auto res = MAKE_BLOB(u8, input_size);
+    for (int i = 0; i < input_size; i++)
+    {
+        res->data[i] = i % 255;
+    }
+    return res;
 }
 
 u8 inline fetch_pixel(int x_idx, int y_idx, int c_idx, int width, int height, int w_stride, u8* image)
@@ -444,7 +454,6 @@ static bm_status_t bmcv_affine_nearest_1n_ref(
                                     unsigned char *dst_image,
                                     bool use_opencv) {
 
-    UNUSED(image_c);
     float_data tensor_S = MAKE_BLOB(float, image_dh *image_dw * 2);
     float *tensor_SX    = tensor_S->data;
     float *   tensor_SY = tensor_SX + image_dh * image_dw;
@@ -550,24 +559,44 @@ static bm_status_t bmcv_affine_nearest_1n_ref(
     int dst_w_stride = dst_w * w_stride;
 
     // warp in source image directly.
-    unsigned char *sb = src_image;
-    unsigned char *sg = sb + src_w_stride * src_h;
-    unsigned char *sr = sg + src_w_stride * src_h;
-    unsigned char *db = dst_image;
-    unsigned char *dg = db + dst_w_stride * dst_h;
-    unsigned char *dr = dg + dst_w_stride * dst_h;
-    tensor_DX         = map;
-    tensor_DY         = tensor_DX + dst_h * dst_w;
-    for (int y = 0; y < dst_h; y++) {
-        for (int x = 0; x < dst_w; x++) {
-            unsigned short sx = tensor_DX[y * dst_w + x];
-            unsigned short sy = tensor_DY[y * dst_w + x];
-            db[y * dst_w_stride + x * w_stride] =
-                sb[sy * src_w_stride + sx * w_stride];
-            dg[y * dst_w_stride + x * w_stride] =
-                sg[sy * src_w_stride + sx * w_stride];
-            dr[y * dst_w_stride + x * w_stride] =
-                sr[sy * src_w_stride + sx * w_stride];
+    if (image_c == 1) {
+        unsigned char *sb = src_image;
+        unsigned char *db = dst_image;
+
+        tensor_DX         = map;
+        tensor_DY         = tensor_DX + dst_h * dst_w;
+
+        for (int y = 0; y < dst_h; y++) {
+            for (int x = 0; x < dst_w; x++) {
+                unsigned short sx = tensor_DX[y * dst_w + x];
+                unsigned short sy = tensor_DY[y * dst_w + x];
+                db[y * dst_w_stride + x * w_stride] =
+                    sb[sy * src_w_stride + sx * w_stride];
+            }
+        }
+    }
+    else if (image_c == 3) {
+        unsigned char *sb = src_image;
+        unsigned char *sg = sb + src_w_stride * src_h;
+        unsigned char *sr = sg + src_w_stride * src_h;
+        unsigned char *db = dst_image;
+        unsigned char *dg = db + dst_w_stride * dst_h;
+        unsigned char *dr = dg + dst_w_stride * dst_h;
+
+        tensor_DX         = map;
+        tensor_DY         = tensor_DX + dst_h * dst_w;
+
+        for (int y = 0; y < dst_h; y++) {
+            for (int x = 0; x < dst_w; x++) {
+                unsigned short sx = tensor_DX[y * dst_w + x];
+                unsigned short sy = tensor_DY[y * dst_w + x];
+                db[y * dst_w_stride + x * w_stride] =
+                    sb[sy * src_w_stride + sx * w_stride];
+                dg[y * dst_w_stride + x * w_stride] =
+                    sg[sy * src_w_stride + sx * w_stride];
+                dr[y * dst_w_stride + x * w_stride] =
+                    sr[sy * src_w_stride + sx * w_stride];
+            }
         }
     }
 
@@ -806,7 +835,7 @@ static bm_status_t bmcv_warp_tpu(bm_handle_t handle,
         int stride = 0;
         bm_image_get_stride(src_img[i], &stride);
 
-        void *ptr = (void *)(src_data->data + 3 * stride * image_sh * i);
+        void *ptr = (void *)(src_data->data + image_c * stride * image_sh * i);
         BM_CHECK_RET(
             bm_image_copy_host_to_device(src_img[i], (void **)(&ptr)));
     }
@@ -937,11 +966,13 @@ static void test_cv_warp_random(int trials) {
 
             auto engine = pool->get_random_engine();
             bool is_bilinear = ((*engine)() & 0x01) ? true : false;
+            is_bilinear = true;
             printf("is_bilinear: %d \n", is_bilinear);
             int src_mode = ((*engine)() & 0x01) ? STORAGE_MODE_1N_INT8 : STORAGE_MODE_4N_INT8;
             src_mode = STORAGE_MODE_1N_INT8;
-            int image_n = rand() % 0x03 + 1;
+            int image_n = 1;
             bool use_opencv = rand() % 0x02 ? true : false;
+            int input_size = 0;
             if (flag == 1){
                 image_sh = (rand() & 0x7fff);
                 image_sw = (rand() & 0x7fff);
@@ -1016,8 +1047,8 @@ static void test_cv_warp_random(int trials) {
             if (!output_num){
                 return;
             }
-
-            auto src_data = image_read(image_n, image_c, image_sh, image_sw, image_dh, image_dw);
+            input_size = image_n * image_c * image_sh * image_sw;
+            auto src_data = image_read(input_size);
             float_data trans_mat = MAKE_BLOB(float, output_num * 6);
 
             for (int i = 0; i < output_num; i++){

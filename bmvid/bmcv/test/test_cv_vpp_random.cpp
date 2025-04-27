@@ -758,6 +758,7 @@ DWORD WINAPI test_vpp_random_thread(LPVOID arg) {
     int loop_times;
     unsigned int seed;
     bm_handle_t handle;
+    unsigned int chipid;
     int dev;
     int thread_id = 0;
 
@@ -767,6 +768,12 @@ DWORD WINAPI test_vpp_random_thread(LPVOID arg) {
 
     std::cout << "dev_id is " << dev <<endl;
     bm_dev_request(&handle, dev);
+    bm_get_chipid(handle, &chipid);
+    if(chipid != 0x1684) {
+        std::cout << "Only 0x1684 is supported, but the current chipid is: 0x" << std::hex << chipid << std::endl;
+        bm_dev_free(handle);
+        return 0;
+    }
     #ifdef __linux__
     std::cout << "------MULTI THREAD TEST STARTING----------thread id is "
               << pthread_self() << std::endl;

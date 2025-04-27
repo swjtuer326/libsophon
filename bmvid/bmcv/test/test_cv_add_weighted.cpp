@@ -3,7 +3,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include "md5.h"
+// #include "md5.h"
 #include "test_misc.h"
 #include <assert.h>
 #include <vector>
@@ -14,48 +14,81 @@
 #include "time.h"
 #endif
 
+typedef unsigned long long u64;
 using namespace std;
 
-static void fill(
-        unsigned char* input,
-        int width,
-        int height,
-        int flag) {
-    switch(flag){
-        case 1:
-            {
-                int count = 10;
-                for(int i = 0; i< width * height * 3; i++ ){
-                    input[i] = count;
-                    count++;
-                    if(count == 256)
-                        count = 10;
+static int g_size = 0;
+
+using namespace std;
+
+template <typename T>
+void fill(
+    T* input,
+    int size,
+    int flag) {
+    switch(flag) {
+        case 1: {
+            T count = static_cast<T>(10);
+            for (int i = 0; i < size; i++) {
+                input[i] = count;
+                count++;
+                if (count == static_cast<T>(256)) {
+                    count = static_cast<T>(10);
                 }
-                break;
             }
-        case 2:
-            {
-                int count = 1;
-                for(int i = 0; i< width * height * 3; i++){
-                    input[i] = count;
-                    count++;
-                    if(count == 9)
-                        count = 1;
+            break;
+        }
+        case 2: {
+            T count = static_cast<T>(1);
+            for (int i = 0; i < size; i++) {
+                input[i] = count;
+                count++;
+                if (count == static_cast<T>(9)) {
+                    count = static_cast<T>(1);
                 }
-                break;
             }
+            break;
+        }
         default:
-           break;
+            break;
     }
 }
 
-static int add_weighted_tpu(
-        unsigned char* input1,
-        unsigned char* input2,
-        unsigned char* output,
+static void readBin(const char* path, unsigned char* input_data, int size)
+{
+    FILE *fp_src = fopen(path, "rb");
+    if (fread((void *)input_data, 1, size, fp_src) < (unsigned int)size) {
+        printf("file size is less than %d required bytes\n", size);
+    };
+
+    fclose(fp_src);
+}
+
+template <typename T>
+static void write_bin(const char *output_path, T *output_data, int size)
+{
+    FILE *fp_dst = fopen(output_path, "wb");
+
+    if (fp_dst == NULL) {
+        printf("unable to open output file %s\n", output_path);
+        return;
+    }
+
+    if(fwrite(output_data, sizeof(T), size, fp_dst) != 0) {
+        printf("write image success\n");
+    }
+    fclose(fp_dst);
+}
+
+template <typename T>
+int add_weighted_tpu(
+        T* input1,
+        T* input2,
+        T* output,
         int height,
         int width,
         int format,
+        int data_type,
         float alpha,
         float beta,
         float gamma) {
@@ -68,173 +101,191 @@ static int add_weighted_tpu(
     bm_image input1_img;
     bm_image input2_img;
     bm_image output_img;
-    bm_image_create(handle, height, width, (bm_image_format_ext)format, DATA_TYPE_EXT_1N_BYTE, &input1_img);
-    bm_image_create(handle, height, width, (bm_image_format_ext)format, DATA_TYPE_EXT_1N_BYTE, &input2_img);
-    bm_image_create(handle, height, width, (bm_image_format_ext)format, DATA_TYPE_EXT_1N_BYTE, &output_img);
+    bm_image_create(handle, height, width, (bm_image_format_ext)format, (bm_image_data_format_ext)data_type, &input1_img);
+    bm_image_create(handle, height, width, (bm_image_format_ext)format, (bm_image_data_format_ext)data_type, &input2_img);
+    bm_image_create(handle, height, width, (bm_image_format_ext)format, (bm_image_data_format_ext)data_type, &output_img);
     bm_image_alloc_dev_mem(input1_img);
     bm_image_alloc_dev_mem(input2_img);
     bm_image_alloc_dev_mem(output_img);
-    unsigned char* in1_ptr[3] = {input1, input1 + height * width, input1 + 2 * height * width};
-    bm_image_copy_host_to_device(input1_img, (void **)in1_ptr);
-    unsigned char* in2_ptr[3] = {input2, input2 + height * width, input2 + 2 * height * width};
-    bm_image_copy_host_to_device(input2_img, (void **)in2_ptr);
 
-    struct timeval t1, t2;
-    gettimeofday_(&t1);
-    bmcv_image_add_weighted(handle, input1_img, alpha, input2_img, beta, gamma, output_img);
-    gettimeofday_(&t2);
-    cout << "addWeight TPU using time: " << ((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) << "us" << endl;
+    int image_byte_size[4] = {0};
+    bm_image_get_byte_size(input1_img, image_byte_size);
 
-    unsigned char* out_ptr[3] = {output, output + height * width, output + 2 * height * width};
-    bm_image_copy_device_to_host(output_img, (void **)out_ptr);
+    // int byte_size  = image_byte_size[0] + image_byte_size[1] + image_byte_size[2] + image_byte_size[3];
+    void* input_addr1[4] = {(void *)input1,
+                        (void *)((T*)input1 + image_byte_size[0]/sizeof(T)),
+                        (void *)((T*)input1 + (image_byte_size[0] + image_byte_size[1])/sizeof(T)),
+                        (void *)((T*)input1 + (image_byte_size[0] + image_byte_size[1] + image_byte_size[2])/sizeof(T))};
+    void* input_addr2[4] = {(void *)input2,
+                        (void *)((T*)input2 + image_byte_size[0]/sizeof(T)),
+                        (void *)((T*)input2 + (image_byte_size[0] + image_byte_size[1])/sizeof(T)),
+                        (void *)((T*)input2 + (image_byte_size[0] + image_byte_size[1] + image_byte_size[2])/sizeof(T))};
+    void* out_addr[4] = {(void *)output,
+                        (void *)((T*)output + image_byte_size[0]/sizeof(T)),
+                        (void *)((T*)output + (image_byte_size[0] + image_byte_size[1])/sizeof(T)),
+                        (void *)((T*)output + (image_byte_size[0] + image_byte_size[1] + image_byte_size[2])/sizeof(T))};
+
+    bm_image_copy_host_to_device(input1_img, (void **)input_addr1);
+    bm_image_copy_host_to_device(input2_img, (void **)input_addr2);
+
+    ret = bmcv_image_add_weighted(handle, input1_img, alpha, input2_img, beta, gamma, output_img);
+
+    bm_image_copy_device_to_host(output_img, (void **)out_addr);
     bm_image_destroy(input1_img);
     bm_image_destroy(input2_img);
     bm_image_destroy(output_img);
     bm_dev_free(handle);
-    return 0;
+    return ret;
 }
 
-static vector<int> get_image_size(int format, int width, int height) {
-    vector<int> size;
-    switch (format) {
-        case FORMAT_YUV420P:
-            size.push_back(width * height);
-            size.push_back(width * height / 4);
-            size.push_back(width * height / 4);
-            break;
-        case FORMAT_YUV422P:
-            size.push_back(width * height);
-            size.push_back(width * height / 2);
-            size.push_back(width * height / 2);
-            break;
-        case FORMAT_YUV444P:
-        case FORMAT_RGB_PLANAR:
-        case FORMAT_BGR_PLANAR:
-        case FORMAT_RGB_PACKED:
-        case FORMAT_BGR_PACKED:
-        case FORMAT_RGBP_SEPARATE:
-        case FORMAT_BGRP_SEPARATE:
-            size.push_back(width * height);
-            size.push_back(width * height);
-            size.push_back(width * height);
-            break;
-        case FORMAT_NV12:
-        case FORMAT_NV21:
-            size.push_back(width * height);
-            size.push_back(width * height / 2);
-            break;
-        case FORMAT_NV16:
-        case FORMAT_NV61:
-        case FORMAT_NV24:
-            size.push_back(width * height);
-            size.push_back(width * height);
-            break;
-        case FORMAT_GRAY:
-            size.push_back(width * height);
-            break;
-        default:
-            cout << "format error" << endl;
+static int get_image_size(int format, int width, int height) {
+    int size = 0;
+    switch (format)
+    {
+    case FORMAT_YUV420P:
+    case FORMAT_NV12:
+    case FORMAT_NV21:
+        size = width * height * 3 / 2;
+        break;
+    case FORMAT_YUV422P:
+    case FORMAT_NV16:
+    case FORMAT_NV61:
+    case FORMAT_NV24:
+        size = width * height * 2;
+        break;
+    case FORMAT_YUV444P:
+    case FORMAT_RGB_PLANAR:
+    case FORMAT_BGR_PLANAR:
+    case FORMAT_RGB_PACKED:
+    case FORMAT_BGR_PACKED:
+    case FORMAT_RGBP_SEPARATE:
+    case FORMAT_BGRP_SEPARATE:
+        size = width * height * 3;
+        break;
+    case FORMAT_GRAY:
+        size = width * height;
+        break;
+    default:
+        break;
     }
     return size;
-}
-
-static int cmp(
-        unsigned char* got,
-        unsigned char* exp,
-        int format,
-        int width,
-        int height) {
-    vector<int> len = get_image_size(format, width, height);
-    for (unsigned int i = 0; i < len.size(); i++) {
-        int done = 0;
-        for (int j = 0; j < len[i]; j++) {
-            if (abs(got[done + j] - exp[done + j]) > 1) {
-                printf("cmp error: plane=%d  idx=%d  exp=%d  got=%d\n", i, j, exp[done + j], got[done + j]);
-                return -1;
-            }
-        }
-        done += len[i];
-    }
-    return 0;
-}
-
-static string  unsignedCharToHex(unsigned char ch[16]){
-    const char hex_chars[] = "0123456789abcdef";
-    string result = "";
-    for(int i = 0; i < 16; i++){
-        unsigned int highHalfByte = (ch[i] >> 4) & 0x0f;
-        unsigned int lowHalfByte = (ch[i] & 0x0f);
-        result += hex_chars[highHalfByte];
-        result += hex_chars[lowHalfByte];
-    }
-    return result;
-}
-
-static int cmpv2(unsigned char* got, unsigned char* exp ,int width, int height, int channel){
-    unsigned char* md5_tpuOut = new unsigned char[16];
-    md5_get(got, (sizeof(unsigned char) * channel * height * width), md5_tpuOut);
-    if(0 != strcmp((unsignedCharToHex(md5_tpuOut).c_str()), (const char*)exp)){
-        cout << "cmp error!" << endl;
-        delete [] md5_tpuOut;
-        return -1;
-    }
-    delete [] md5_tpuOut;
-    return 0;
 }
 
 static int test_add_weighted_random(
         int height,
         int width,
-        int format) {
+        int format,
+        int data_type,
+        int real_img) {
+    int ret;
     float alpha = 0.773;
     float beta = 0.22;
     float gamma = 41.6;
-    struct timespec tp;
-    clock_gettime_(0, &tp);
 
-    unsigned int seed = tp.tv_nsec;
-    srand(seed);
-    cout << "seed = " << seed << endl;
+    char input_path1[256];
+    char input_path2[256];
+    char output_path[256];
+    snprintf(input_path1, sizeof(input_path1), "path/to/input1_%d_%d_%d_%d.bin", width, height, data_type, format);
+    snprintf(input_path2, sizeof(input_path2), "path/to/input2_%d_%d_%d_%d.bin", width, height, data_type, format);
+    snprintf(output_path, sizeof(output_path), "path/to/output_%d_%d_%d_%d.bin", width, height, data_type, format);
+
+
     cout << "format: " << format << endl;
+    cout << "data_type: " << data_type << endl;
     cout << "width: " << width << "  height: " << height << endl;
     cout << "alpha: " << alpha << "  beta: " << beta << "  gamma: " << gamma << endl;
-    unsigned char* input1_data = new unsigned char [width * height * 3];
-    unsigned char* input2_data = new unsigned char [width * height * 3];
-    unsigned char* output_tpu = new unsigned char [width * height * 3];
-    fill(input1_data, width, height, 1);
-    fill(input2_data, width, height, 2);
-    fill(output_tpu, width, height, 2);
-    add_weighted_tpu(
-        input1_data,
-        input2_data,
-        output_tpu,
-        height, width,
-        format,
-        alpha,
-        beta,
-        gamma);
-    unsigned char md5_opencvOut[] = "79863aab1236c0c019a57435865b714e";
-    int ret = cmpv2(output_tpu, md5_opencvOut, width, height, 3);
-    delete [] input1_data;
-    delete [] input2_data;
-    delete [] output_tpu;
+
+    // int size = 0;
+    g_size = get_image_size(format, width, height);
+
+    unsigned char* input1_data_uchar = (unsigned char*)malloc(g_size * sizeof(unsigned char));
+    unsigned char* input2_data_uchar = (unsigned char*)malloc(g_size * sizeof(unsigned char));
+    unsigned char* output_tpu_uchar = (unsigned char*)malloc(g_size * sizeof(unsigned char));
+
+    float* input1_data_float = (float*)malloc(g_size * sizeof(float));
+    float* input2_data_float = (float*)malloc(g_size * sizeof(float));
+    float* output_tpu_float = (float*)malloc(g_size * sizeof(float));
+
+    if (real_img == 1) {
+
+        readBin(input_path1, input1_data_uchar, g_size);
+        readBin(input_path2, input2_data_uchar, g_size);
+        if (data_type == 0) {
+            for (int i = 0; i < g_size; i++) {
+                input1_data_float[i] = (float)input1_data_uchar[i];
+                input2_data_float[i] = (float)input2_data_uchar[i];
+            }
+            ret = add_weighted_tpu(input1_data_float, input2_data_float, output_tpu_float, height, width, format, data_type, alpha, beta, gamma);
+            write_bin(output_path, output_tpu_float, g_size);
+        } else {
+            ret = add_weighted_tpu(input1_data_uchar, input2_data_uchar, output_tpu_uchar, height, width, format, data_type, alpha, beta, gamma);
+            write_bin(output_path, output_tpu_uchar, g_size);
+        }
+    } else {
+        if (data_type == 0) {
+            fill(input1_data_float, g_size, 1);
+            write_bin(input_path1, input1_data_float, g_size);
+            fill(input2_data_float, g_size, 2);
+
+            write_bin(input_path2, input2_data_float, g_size);
+            fill(output_tpu_float, g_size, 2);
+            ret = add_weighted_tpu(input1_data_float, input2_data_float, output_tpu_float, height, width, format, data_type, alpha, beta, gamma);
+            write_bin(output_path, output_tpu_float, g_size);
+
+            for (int i = 0; i < g_size; i++) {
+                output_tpu_uchar[i] = (unsigned char)output_tpu_float[i];
+            }
+        } else {
+            fill(input1_data_uchar, g_size, 1);
+            write_bin(input_path1, input1_data_uchar, g_size);
+            fill(input2_data_uchar, g_size, 2);
+            write_bin(input_path2, input2_data_uchar, g_size);
+            fill(output_tpu_uchar, g_size, 2);
+            ret = add_weighted_tpu(input1_data_uchar, input2_data_uchar, output_tpu_uchar, height, width, format, data_type, alpha, beta, gamma);
+            write_bin(output_path, output_tpu_uchar, g_size);
+        }
+    }
+
+    free(output_tpu_float);
+    free(input1_data_uchar);
+    free(input2_data_uchar);
+    free(output_tpu_uchar);
     return ret;
 }
 
 int main(int argc, char* args[]) {
     int loop = 1;
-    int height = 1080;
-    int width = 1920;
-    int format = FORMAT_RGBP_SEPARATE;
+    int width = 800;
+    int height = 600;
+    int format = 8;
+    int data_type = 0;  // float: 0; unsigned char: 1
+    int real_img = 0;
     if (argc > 1) loop = atoi(args[1]);
+    if (argc > 2) width = atoi(args[2]);
+    if (argc > 3) height = atoi(args[3]);
+    if (argc > 4) format = atoi(args[4]);
+    if (argc > 5) data_type = atoi(args[5]);
+    if (argc > 6) real_img = atoi(args[6]);
+
+    if (argc == 2 && atoi(args[1]) == -1) {
+        printf("usage:\n");
+        printf("%s loop width height format data_type real_img \n", args[0]);
+        printf("example:\n");
+        printf("%s \n", args[0]);
+        printf("%s 2\n", args[0]);
+        printf("%s 1 512 512 8 0 0\n", args[0]);
+        return 0;
+    }
+
     int ret = 0;
     for (int i = 0; i < loop; i++) {
-        ret = test_add_weighted_random(height, width, format);
+        ret = test_add_weighted_random(height, width, format, data_type, real_img);
+
         if (ret) {
             cout << "test add_weighted failed" << endl;
             return ret;
         }
     }
-    cout << "Compare TPU result with OpenCV successfully!" << endl;
+    cout << "test add_weighted successfully!" << endl;
     return 0;
 }

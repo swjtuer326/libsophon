@@ -3,6 +3,7 @@ bmcv_image_gaussian_blur
 
 Gaussian blur of the image.
 
+
 **Processor model support**
 
 This interface supports BM1684/BM1684X.
@@ -12,14 +13,14 @@ This interface supports BM1684/BM1684X.
 
     .. code-block:: c
 
-         bm_status_t bmcv_image_gaussian_blur(
-                 bm_handle_t handle,
-                 bm_image input,
-                 bm_image output,
-                 int kw,
-                 int kh,
-                 float sigmaX,
-                 float sigmaY = 0);
+        bm_status_t bmcv_image_gaussian_blur(
+                    bm_handle_t handle,
+                    bm_image input,
+                    bm_image output,
+                    int kw,
+                    int kh,
+                    float sigmaX,
+                    float sigmaY = 0);
 
 
 **Parameter Description:**
@@ -67,19 +68,15 @@ The interface currently supports the following image_format:
 +-----+------------------------+------------------------+
 | num | input image_format     | output image_format    |
 +=====+========================+========================+
-| 1   | FORMAT_BGR_PACKED      | FORMAT_BGR_PACKED      |
+| 1   | FORMAT_BGR_PLANAR      | FORMAT_BGR_PLANAR      |
 +-----+------------------------+------------------------+
-| 2   | FORMAT_BGR_PLANAR      | FORMAT_BGR_PLANAR      |
+| 2   | FORMAT_RGB_PLANAR      | FORMAT_RGB_PLANAR      |
 +-----+------------------------+------------------------+
-| 3   | FORMAT_RGB_PACKED      | FORMAT_RGB_PACKED      |
+| 3   | FORMAT_RGBP_SEPARATE   | FORMAT_RGBP_SEPARATE   |
 +-----+------------------------+------------------------+
-| 4   | FORMAT_RGB_PLANAR      | FORMAT_RGB_PLANAR      |
+| 4   | FORMAT_BGRP_SEPARATE   | FORMAT_BGRP_SEPARATE   |
 +-----+------------------------+------------------------+
-| 5   | FORMAT_RGBP_SEPARATE   | FORMAT_RGBP_SEPARATE   |
-+-----+------------------------+------------------------+
-| 6   | FORMAT_BGRP_SEPARATE   | FORMAT_BGRP_SEPARATE   |
-+-----+------------------------+------------------------+
-| 7   | FORMAT_GRAY            | FORMAT_GRAY            |
+| 5   | FORMAT_GRAY            | FORMAT_GRAY            |
 +-----+------------------------+------------------------+
 
 The interface currently supports the following data_type:
@@ -97,58 +94,72 @@ The interface currently supports the following data_type:
 
 2. The data_type and image_format of input and must be the same.
 
-3. The maximum width of the image supported by BM1684 is (2048 - kw), the maximum width supported by BM1684X is 4096, and the maximum height is 8192.
+3. The maximum width of the image supported by BM1684 is (2048 - kw), In the BM1684X chip, when the kernel size is 1 and 3, the supported width and height range is 8*8 to 8192*8192, when the kernel size is 5, the supported width and height range is 8*8 to 4096*8192, and when the kernel size is 7, the supported width and height range is 8*8 to 2048*8192.
 
-4. The maximum convolution kernel width and height supported by BM1684 is 31, and the maximum convolution kernel width and height supported by BM1684X is 3.
+4. The maximum convolution kernel width and height supported by BM1684 is 31, and the maximum convolution kernel width and height supported by BM1684X is 7.
+
+
 **Code example:**
 
     .. code-block:: c
 
+        #include <stdio.h>
+        #include "bmcv_api_ext.h"
+        #include "stdlib.h"
+        #include "string.h"
+        #include <assert.h>
+        #include <float.h>
+        #include <math.h>
 
-        int channel   = 1;
-        int width     = 1920;
-        int height    = 1080;
-        int dev_id    = 0;
-        bm_handle_t handle;
-        bm_status_t dev_ret = bm_dev_request(&handle, dev_id);
-        std::shared_ptr<unsigned char> src_ptr(
-                new unsigned char[channel * width * height],
-                std::default_delete<unsigned char[]>());
-        std::shared_ptr<unsigned char> res_ptr(
-                new unsigned char[channel * width * height],
-                std::default_delete<unsigned char[]>());
-        unsigned char * src_data = src_ptr.get();
-        unsigned char * res_data = res_ptr.get();
-        for (int i = 0; i < channel * width * height; i++) {
-            src_data[i] = rand() % 255;
+        static void readBin(const char* path, unsigned char* input_data, int size)
+        {
+            FILE *fp_src = fopen(path, "rb");
+
+            if (fread((void *)input_data, 1, size, fp_src) < (unsigned int)size) {
+                printf("file size is less than %d required bytes\n", size);
+            };
+
+            fclose(fp_src);
         }
-        // calculate res
-        bm_image input, output;
-        bm_image_create(handle,
-                        height,
-                        width,
-                        FORMAT_GRAY,
-                        DATA_TYPE_EXT_1N_BYTE,
-                        &input);
-        bm_image_alloc_dev_mem(input);
-        bm_image_copy_host_to_device(input, (void **)&src_data);
-        bm_image_create(handle,
-                        height,
-                        width,
-                        FORMAT_GRAY,
-                        DATA_TYPE_EXT_1N_BYTE,
-                        &output);
-        bm_image_alloc_dev_mem(output);
-        if (BM_SUCCESS != bmcv_image_gaussian_blur(handle, input, output, 3, 3, 0.1)) {
-            std::cout << "bmcv gaussian blur error !!!" << std::endl;
+
+        static void writeBin(const char * path, unsigned char* input_data, int size)
+        {
+            FILE *fp_dst = fopen(path, "wb");
+            if (fwrite((void *)input_data, 1, size, fp_dst) < (unsigned int)size) {
+                printf("file size is less than %d required bytes\n", size);
+            };
+
+            fclose(fp_dst);
+        }
+
+        int main()
+        {
+            int channel = 1;
+            int width = 1920;
+            int height = 1080;
+            int dev_id = 0;
+            bm_handle_t handle;
+            bm_image input, output;
+            const char *input_path = "path/to/input";
+            const char *output_path = "path/to/output";
+            unsigned char* src_data = new unsigned char[channel * width * height];
+            unsigned char* res_data = new unsigned char[channel * width * height];
+
+            readBin(input_path, src_data, channel * width * height);
+            bm_dev_request(&handle, dev_id);
+            bm_image_create(handle, height, width, FORMAT_GRAY, DATA_TYPE_EXT_1N_BYTE, &input);
+            bm_image_alloc_dev_mem(input);
+            bm_image_copy_host_to_device(input, (void**)&src_data);
+            bm_image_create(handle, height,width, FORMAT_GRAY, DATA_TYPE_EXT_1N_BYTE, &output);
+            bm_image_alloc_dev_mem(output);
+            bmcv_image_gaussian_blur(handle, input, output, 3, 3, 0.1);
+            bm_image_copy_device_to_host(output, (void**)&res_data);
+            writeBin(output_path, res_data, channel * width * height);
+
             bm_image_destroy(input);
             bm_image_destroy(output);
+            free(src_data);
+            free(res_data);
             bm_dev_free(handle);
-            exit(-1);
+            return 0;
         }
-        bm_image_copy_device_to_host(output, (void **)&res_data);
-        bm_image_destroy(input);
-        bm_image_destroy(output);
-        bm_dev_free(handle);
-
-

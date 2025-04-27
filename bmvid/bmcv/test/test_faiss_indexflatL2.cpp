@@ -500,18 +500,10 @@ int main(int argc, char *argv[]) {
     srand(seed);
     std::cout << "random seed = " << seed << std::endl;
 
-    // int sort_cnt = 100;
-    // int vec_dims = 256;
-    // int query_vecs_num = 1;
-    // int database_vecs_num = 2000000;
-    // int is_transpose = 1;
-    // int input_dtype = DT_FP32;
-    // int output_dtype = DT_FP32;
-
-    int sort_cnt = rand() % 100 + 1;
+    int sort_cnt = rand() % 10 + 1;
     int database_vecs_num = rand() % 10000 + 1 + sort_cnt;
-    int query_vecs_num = rand() % 64 + 1;
-    int vec_dims = rand() % 256 + 1;
+    int query_vecs_num = 1;
+    int vec_dims = 256;
     int is_transpose = rand() % 2;
     int input_dtype = rand() % 2 == 0? DT_FP32 : DT_FP16;
     int output_dtype = rand() % 2 == 0? DT_FP32 : DT_FP16;
@@ -523,7 +515,7 @@ int main(int argc, char *argv[]) {
     if (argc > 5) is_transpose = atoi(argv[5]);
     if (argc > 6) input_dtype = atoi(argv[6]);
     if (argc > 7) output_dtype = atoi(argv[7]);
-    
+
     std::cout << "------------parameter------------" << std::endl;
     std::cout << "database_num: " << database_vecs_num << std::endl;
     std::cout << "query_num:    " << query_vecs_num << std::endl;

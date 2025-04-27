@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
+
+
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the build type: Release Debug RelWithDebInfo MinSizeRel." FORCE)
 endif()
@@ -101,8 +103,17 @@ if(KERNEL_PATH)
     message(STATUS "KERNEL_PATH................. ${KERNEL_PATH}")
 endif()
 
+option(USING_OPENBLAS "Enable OpenBLAS support" ON)
+########################
+# ALways Enable USING_OPENBLAS
+if(PLATFORM STREQUAL "soc" OR PLATFORM STREQUAL "pcie")
+    set(USING_OPENBLAS 1)
+else()
+    set(USING_OPENBLAS 0)
+endif()
 ########################
 # Add common configuarations
+
 if(${HOST_ARCH} STREQUAL "x86" AND ${PLATFORM} STREQUAL "pcie")
 include(cmake/bmvid_${HOST_ARCH}_${PLATFORM}_device.cmake)
 endif()
@@ -150,7 +161,7 @@ if (CHIP_NAME STREQUAL bm1684)
         if(${CHIP_NAME} STREQUAL "bm1684")
             ADD_TARGET_ION_LIB(ion_lib ${CHIP_NAME} ${PLATFORM} ${SUBTYPE} ${DEBUG} ${BM_MEDIA_ION} libsophon ${BMVID_OUT_PATH})
             ADD_TARGET_BMCV_LIB(bmcv_lib ${CHIP_NAME} ${PLATFORM} ${SUBTYPE} ${DEBUG} ${BM_MEDIA_ION}
-                libsophon ${BMVID_OUT_PATH} ${BMVID_OUT_PATH} ${BMVID_OUT_PATH} ${BMVID_OUT_PATH})
+                libsophon ${BMVID_OUT_PATH} ${BMVID_OUT_PATH} ${BMVID_OUT_PATH} ${BMVID_OUT_PATH} ${USING_OPENBLAS})
 
             add_dependencies(vpp_lib ion_lib)
             add_dependencies(jpu_lib ion_lib)
@@ -168,7 +179,7 @@ if (CHIP_NAME STREQUAL bm1684)
             ADD_TARGET_VPP_LIB(bmcpu_vpp_lib bm1684 soc ${SUBTYPE} ${DEBUG} ${BM_MEDIA_ION} bmcpu ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH})
             ADD_TARGET_ION_LIB(bmcpu_ion_lib bm1684 soc ${SUBTYPE} ${DEBUG} ${BM_MEDIA_ION} bmcpu ${BMVID_BMCPU_OUT_PATH})
             ADD_TARGET_BMCV_LIB(bmcpu_bmcv_lib bm1684 soc ${SUBTYPE} ${DEBUG} ${BM_MEDIA_ION} bmcpu
-                ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH})
+                ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH} ${BMVID_BMCPU_OUT_PATH} ${USING_OPENBLAS})
 
             add_dependencies(bmcpu_ion_lib ion_lib)  # avoid compile ion_lib bmcpu_ion_lib in parallel
             add_dependencies(bmcpu_yuv_lib yuv_lib)  # avoid compile yuv_lib bmcpu_yuv_lib in parallel
