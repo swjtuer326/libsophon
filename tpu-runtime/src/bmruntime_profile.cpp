@@ -59,7 +59,7 @@ BMProfile::BMProfile(Bmruntime* p_bmrt): p_bmrt(p_bmrt), enabled(false) {
     auto arch = bmrt_arch_info::get_bmtpu_arch();
     if(arch== BM1684){
       device = decltype(device)(new bm1684_profile::BMProfileDevice(this));
-    } else if(arch == BM1684X){
+    } else if(arch == BM1684X || arch == BM1684XE){
       device = decltype(device)(new bm1684x_profile::BMProfileDevice(this));
     } else if (arch == BM1688) {
       device = decltype(device)(new bm1688_profile::BMProfileDevice(this));
@@ -344,6 +344,7 @@ bool BMProfile::need_profile(int iteration, int subnet_id, int subnet_mode)
 
 void BMProfile::begin_subnet(net_ctx_t* net_ctx, int iteration, int subnet_id, int subnet_mode)
 {
+    std::lock_guard<std::mutex> guard(this->mutex);
     current_enabled = need_profile(iteration, subnet_id, subnet_mode);
     if(!current_enabled) return;
     summary.iteration = iteration;

@@ -11,6 +11,7 @@ typedef enum {
 
   BM_API_ID_SET_PROFILE_ENABLE               = 986,
   BM_API_ID_GET_PROFILE_DATA                 = 987,
+  BM_API_ID_SET_ENGINE_PROFILE_PARAM         = 988,
   BM_API_ID_START_CPU               = 0x80000001,
   BM_API_ID_OPEN_PROCESS            = 0x80000002,
   BM_API_ID_LOAD_LIBRARY            = 0x80000003,

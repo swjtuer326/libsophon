@@ -375,9 +375,9 @@ static void bm_smi_sn_to_str(int dev_id, char *s) {
 static void bm_smi_board_type_to_str(int dev_id, char *s) {
     int length = strlen(g_attr[dev_id].board_type);
     if (g_attr[dev_id].chip_mode == 0 && length < 5){
-        snprintf(s, 10, "%s%s", "  ",g_attr[dev_id].board_type);
+        snprintf(s, 11, "%s%s", "  ",g_attr[dev_id].board_type);
     } else {
-	snprintf(s, 10, "%s", g_attr[dev_id].board_type);
+	snprintf(s, 11, "%s", g_attr[dev_id].board_type);
     }
 }
 
@@ -612,7 +612,7 @@ static void bm_smi_display_attr(int            dev_id,
     char tpuc_s[6];
     char fan_s[4];
     char tpu_util_s[6];
-    char board_type_s[10];
+    char board_type_s[11];
     char vpu_decode[13];
     char vpu_encode[5];
     char jpu_instance_core[13];
@@ -654,7 +654,7 @@ static void bm_smi_display_attr(int            dev_id,
 		    if (g_attr[dev_id].chip_mode == 0){
                         snprintf(line_str,
                                  BUFFER_LEN,
-                                 "|%2s  %-10s %5s %17s |%2d   %4s    %4s",
+                                 "|%2s %-11s %5s %17s |%2d   %4s    %4s",
                                  card_index_s,
                                  board_type_s,
                                  mode_s,
@@ -684,22 +684,6 @@ static void bm_smi_display_attr(int            dev_id,
                              ecc_s,
                              cnum_s,
                              tpu_util_s);
-                    snprintf(whole_str,
-                             BUFFER_LEN,
-                             "|%2s  %-10s %5s %17s |%2d   %4s    %4s   %5s  "
-                             " %5s  %3s    %3s       %5s |\n",
-                             card_index_s,
-                             board_type_s,
-                             mode_s,
-                             sn_s,
-                             dev_id,
-                             boardt_s,
-                             chipt_s,
-                             tpup_s,
-                             tpuv_s,
-                             ecc_s,
-                             cnum_s,
-                             tpu_util_s);
                 } else {
                     snprintf(line_str,
                              BUFFER_LEN,
@@ -717,19 +701,10 @@ static void bm_smi_display_attr(int            dev_id,
                              ecc_s,
                              cnum_s,
                              tpu_util_s);
-                    snprintf(whole_str,
-                             BUFFER_LEN,
-                             "|                                       |%2d   "
-                             "%4s    %4s   %5s   %5s  %3s    %3s       %5s |\n",
-                             dev_id,
-                             boardt_s,
-                             chipt_s,
-                             tpup_s,
-                             tpuv_s,
-                             ecc_s,
-                             cnum_s,
-                             tpu_util_s);
                 }
+                strncat(whole_str, line_str, BUFFER_LEN-strlen(whole_str)-1);
+                strncat(whole_str, "   ", BUFFER_LEN-strlen(whole_str)-1);
+                strncat(whole_str, after_color_str, BUFFER_LEN-strlen(whole_str)-1);
             } break;
             case 1:
                 if (g_attr[dev_id].board_attr) {

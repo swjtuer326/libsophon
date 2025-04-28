@@ -60,6 +60,11 @@ typedef struct bm_api_reset_cpu {
 } __attribute__((packed)) bm_api_reset_cpu_t;
 #endif
 
+void bmdrv_modules_request_irq(struct bm_device_info *bmdi);
+void bmdrv_modules_free_irq(struct bm_device_info *bmdi);
+
+int bmdrv_reset_bmcpu(struct bm_device_info *bmdi);
+
 static int bmdrv_pci_init_bar_address(struct pci_dev *pdev, struct chip_info *cinfo)
 {
 	int rc;
@@ -495,6 +500,7 @@ retry1:
 			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_SC7_FP150) ||
 			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_CP24) ||
 			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_SC7_PLUS) ||
+			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_SC7_HP75_1) ||
 			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_AIV01X) ||
 			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_AIV02X) ||
 			(BM1684_BOARD_TYPE(bmdi) == BOARD_TYPE_AIV03X)) {
@@ -659,7 +665,7 @@ static u32 bmdrv_get_a53_boot_args(struct bm_device_info *bmdi)
 	return flag;
 }
 
-int bmdrv_force_reset_bmcpu(struct bm_device_info *bmdi) {
+static int bmdrv_force_reset_bmcpu(struct bm_device_info *bmdi) {
 	int                  ret = 0;
 	u32                  flag  = 0xabcdabcd;
 	int                  retry = 3;
@@ -732,8 +738,9 @@ int bmdrv_force_reset_bmcpu(struct bm_device_info *bmdi) {
 	}
 
 	if (bmdi->eth_state == true) {
-		bmdi->eth_state = false;
-		bmdrv_veth_deinit(bmdi, bmdi->cinfo.pcidev);
+		// bmdi->eth_state = false;
+		// bmdrv_veth_deinit(bmdi, bmdi->cinfo.pcidev);
+		bmdrv_clear_veth(bmdi);
 	}
 
 	bm_write32(bmdi, VETH_SHM_START_ADDR_1684X + VETH_RESET_REG, 0);
@@ -741,7 +748,7 @@ int bmdrv_force_reset_bmcpu(struct bm_device_info *bmdi) {
 	return ret;
 }
 
-int bmdrv_force_reset_bmcpu_pcie(struct bm_device_info *bmdi) {
+static int bmdrv_force_reset_bmcpu_pcie(struct bm_device_info *bmdi) {
 	int                  ret = 0;
 	u32                  flag  = 0xabcdabcd;
 	int                  retry = 3;
@@ -781,7 +788,7 @@ int bmdrv_force_reset_bmcpu_pcie(struct bm_device_info *bmdi) {
 	return ret;
 }
 
-void bmdrv_fw_unload_mix(struct bm_device_info *bmdi)
+static void bmdrv_fw_unload_mix(struct bm_device_info *bmdi)
 {
 	// u32 ctrl_word;
 	int value = 0x0;
@@ -925,7 +932,7 @@ int bmdrv_reset_bmcpu(struct bm_device_info *bmdi)
 }
 #endif
 
-void bmdrv_init_devid_array(void)
+static void bmdrv_init_devid_array(void)
 {
 	int i = 0;
 	struct bm_pcie_record *p = bm_record;
@@ -939,7 +946,7 @@ void bmdrv_init_devid_array(void)
 	}
 }
 
-int bmdrv_check_domain_bdf(int domain_bdf)
+static int bmdrv_check_domain_bdf(int domain_bdf)
 {
 	int i = 0;
 	struct bm_pcie_record *p = bm_record;
@@ -954,7 +961,7 @@ int bmdrv_check_domain_bdf(int domain_bdf)
 	return -1;
 }
 
-void bmdrv_dump_pcie_record(void)
+static void bmdrv_dump_pcie_record(void)
 {
 	int i = 0;
 	struct bm_pcie_record *p = bm_record;
@@ -967,7 +974,7 @@ void bmdrv_dump_pcie_record(void)
 	}
 }
 
-int bmdrv_alloc_dev_index(struct pci_dev *pdev)
+static int bmdrv_alloc_dev_index(struct pci_dev *pdev)
 {
 	int dev_index = 0;
 	int i = 0;
@@ -1019,6 +1026,57 @@ int bmdrv_alloc_dev_index(struct pci_dev *pdev)
 	return -1;
 }
 
+/*
+ * @param bmdi chip information structure
+ * @param bl2 major version
+ * @param bl2 minor version
+ * @return 1 means version is behind, 0 means version is equal or forward
+ */
+static int bmdrv_check_bl2_version(struct bm_device_info* bmdi, u32 major, u32 minor)
+{
+	u32 tmp_major = bmdi->cinfo.version.bl2_major_version;
+	u32 tmp_minor = bmdi->cinfo.version.bl2_minor_version;
+
+	if (tmp_major > major) {
+		return 0;
+	} else {
+		if (tmp_major == major && tmp_minor >= minor) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int bmdrv_convert_and_check_bl2_version(struct bm_device_info *bmdi, u32 major, u32 minor)
+{
+	int ret = 0;
+	char tmp_string[4];
+	char *versionStart;
+
+	if (bmdi->cinfo.chip_id == 0x1684){
+		return 1;
+	}
+
+	strncpy(tmp_string, bmdi->cinfo.version.bl2_version,4);
+	versionStart = strstr(tmp_string, "v");
+
+	if (tmp_string[0] == 'v'){
+		versionStart++;
+		if (sscanf(versionStart, "%u.%u",
+			  &bmdi->cinfo.version.bl2_major_version, &bmdi->cinfo.version.bl2_minor_version) != 2) {
+			pr_err("failed to get bl2 version\n");
+			return -1;
+		}
+	} else {
+		pr_err("Failed to get version string\n");
+		return -1;
+	}
+
+	ret = bmdrv_check_bl2_version(bmdi, major, minor);
+
+	return ret;
+}
+
 static int bmdrv_get_boot_loader_version(struct bm_device_info *bmdi)
 {
 	int ret;
@@ -1045,6 +1103,20 @@ static void bmdrv_record_boot_loader_version(struct bm_device_info *bmdi)
 
 	kfree(bmdi->cinfo.version.bl1_version);
 	kfree(bmdi->cinfo.version.bl2_version);
+}
+
+static void bmdrv_driver_status_update(struct bm_device_info *bmdi, int status)
+{
+	int ret = -1;
+	ret = gp_reg_read_enh(bmdi, GP_REG_DEV_STA);
+	if (ret != status){
+		gp_reg_write_enh(bmdi, GP_REG_DEV_STA, status);
+	}
+
+	ret = gp_reg_read_enh(bmdi, GP_REG_DEV_STA);
+	if(ret != status){
+		pr_err("Card %d Current driver status is not %d, but %d\n", bmdi->dev_index, status, ret);
+	}
 }
 
 extern int sg_comm_init(struct pci_dev *pdev, struct bm_device_info *bmdi);
@@ -1083,6 +1155,9 @@ static int bmdrv_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	rc = bmdrv_pci_init(bmdi, pdev);
 	if (rc)
 		return rc;
+
+	/* set 1 to gp24 as driver start probe, bl2 stop update data */
+	bmdrv_driver_status_update(bmdi,START_PROBE);
 
 	bmdrv_modules_reset(bmdi);
 
@@ -1177,6 +1252,14 @@ static int bmdrv_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (rc)
 		goto err_card_init;
 
+#ifndef SOC_MODE
+	if (bmdi->bmcd->running_chip_num == bmdi->bmcd->chip_num){
+		rc = bmdrv_set_vfs_volt(bmdi);
+		if (rc)
+			dev_err(&pdev->dev,"not supprt board type for vfs\n");
+	}
+#endif
+
 	dev_info(cinfo->device, "Card %d(type:%s) probe done\n", bmdi->dev_index,
 			cinfo->chip_type);
 
@@ -1267,6 +1350,9 @@ static void bmdrv_pci_remove(struct pci_dev *pdev)
 
 	bmdrv_software_deinit(bmdi);
 
+	/* set 0 to gp24 as driver not probe, bl2 start update data */
+	bmdrv_driver_status_update(bmdi,NOT_PROBE);
+
 	bmdrv_pci_deinit(bmdi, pdev);
 
 	kobject_del(&bmdi->kobj);
@@ -1331,6 +1417,8 @@ static void bmdrv_pci_shutdown(struct pci_dev *pdev)
 	struct bm_device_info *bmdi = pci_get_drvdata(pdev);
 
 	dev_info(bmdi->cinfo.device, "shutdown\n");
+	/* set 0 to gp24 as driver not probe, bl2 start update data */
+	bmdrv_driver_status_update(bmdi,NOT_PROBE);
 	///TODO:
 
 }
@@ -1414,6 +1502,9 @@ module_exit(bmdrv_module_exit);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 MODULE_IMPORT_NS(DMA_BUF);
 #endif
+MODULE_FIRMWARE("bm1684x_firmware.bin");
+MODULE_FIRMWARE("bm1684_ddr_firmware.bin");
+MODULE_FIRMWARE("bm1684_tcm_firmware.bin");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("xiao.wang@sophgo.com");
 MODULE_DESCRIPTION("Sophon Series Deep Learning Accelerator Driver");
