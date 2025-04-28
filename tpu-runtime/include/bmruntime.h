@@ -293,6 +293,7 @@ struct net_ctx_t {
   int32_t step_id = 0;
   bool in_cascade = false;
   int32_t addr_mode = 0;
+  bm_device_mem_t io_alone_max_mem;
   vector<int> input_from; // input is loaded from which device
   vector<int> input_hidden_v;
   vector<int> input_index_v;
@@ -461,6 +462,9 @@ class Bmruntime {
 
   inline void set_flags(uint32_t flags) {
     m_flags = flags;
+    if (flags & BM_RUNTIME_SHARE_MEM) {
+      m_flags |= BM_RUNTIME_SHARE_DYNMEM;
+    }
   }
 
   inline int get_network_number()
@@ -558,6 +562,7 @@ protected:
   bool load_bmodel_net(ModelCtx*, int net_idx);
   bool load_bmodel_net(ModelCtx*, int net_idx, net_ctx_t* net_ctx);
   bool cascade_net_init(const Net* net, int net_idx, net_ctx_t* net_ctx);
+  void build_tpu_module(const unsigned char* firmware_data, size_t firmware_size);
   void load_tpu_module(ModelCtx*);
   void load_cpu_module(ModelCtx*);
   bool fill_net_ctx(
@@ -789,8 +794,8 @@ class KernelModule {
 public:
   explicit KernelModule(bm_handle_t &handle):m_handle(handle) {}
   ~KernelModule();
-private:
-  void preload_funcs(int core_id);
+protected:
+  virtual void preload_funcs(int core_id);
 public:
   void add_core_module(int core_id, const unsigned char* binary, size_t size);
   void add_core_module(int core_id, const char* filename);
@@ -801,7 +806,7 @@ public:
   vector<tpu_kernel_function_t> get_set_engine_profile_param_func_id(const vector<int>& core_list);
   vector<tpu_kernel_function_t> get_global_move_1684x_func_id(const vector<int>& core_list);
 
-private:
+protected:
   bm_handle_t m_handle;
   map<int, tpu_kernel_module_t> _kernel_modules;
   map<int, tpu_kernel_function_t> _multi_fullnet_func_id;
@@ -811,6 +816,12 @@ private:
   map<int, tpu_kernel_function_t> _set_engine_profile_param_func_id;
   map<int, tpu_kernel_function_t> _global_move_1684x_func_id;
   vector<tpu_kernel_function_t> __get_vector_funcs(const vector<int>& core_list, map<int, tpu_kernel_function_t>& func_map, const char* name);
+};
+
+class KernelModuleLite : public KernelModule {
+  using KernelModule::KernelModule;
+protected:
+  void preload_funcs(int core_id) override;
 };
 
 class CascadeThread {

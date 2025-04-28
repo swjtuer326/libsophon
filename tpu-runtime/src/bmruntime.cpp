@@ -1118,9 +1118,6 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
   // u64 output_shape_global_addr =  must_alloc_device_mem(devid, &output_shape_mem, output_num*sizeof(bm_shape_ex_t));
   std::string suffix = (m_flags & BM_RUNTIME_SHARE_MEM) ? "" : "_" + std::to_string(dyn_core_mask);
   u64 output_shape_global_addr = alloc_device_mem(devid, output_shape_mem, output_num*sizeof(bm_shape_ex_t), "dynamic_out"+suffix, 1, false);
-  if (alloc_mem) {
-    bm_device_mem_ext_t output_shape_mem_ext(output_shape_mem, this, devid);
-  }
 
   #ifdef __linux__
   int input_elem_num[input_num];
@@ -1168,23 +1165,35 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
         output_shape_global_addr,
         net_ctx->do_allreduce == 1 ? &(net_ctx->allreduce_param) : NULL);
   } else if (arch == BM1688) {
-    auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+    std::vector<u64> dyn_offset;
+    if (m_flags & BM_RUNTIME_SHARE_MEM) {
+      dyn_offset = stage->dynamic_ctx_offset;
+    } else {
+      auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+      dyn_offset = dyn_neuron->dynamic_ctx_offset;
+    }
     auto func_id = net_ctx->kernel_module_->get_dynamic_fullnet_func_id(core_list);
     status = bmfunc::bmdnn_1688()->_bmdnn_dynamic_fullnet_(
         m_handles[devid], func_id, stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
         user_input_shapes, input_elem_num, input_dims, output_num,
         user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, (m_flags & BM_RUNTIME_SHARE_MEM) ? stage->dynamic_ctx_offset : dyn_neuron->dynamic_ctx_offset,
+        stage->ctx_borders, dyn_offset,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         core_list);
   } else if (arch == BM1690) {
-    auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+    std::vector<u64> dyn_offset;
+    if (m_flags & BM_RUNTIME_SHARE_MEM) {
+      dyn_offset = stage->dynamic_ctx_offset;
+    } else {
+      auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+      dyn_offset = dyn_neuron->dynamic_ctx_offset;
+    }
     status = bmfunc::bmdnn_2260()->_bmdnn_dynamic_fullnet_(
         m_handles[devid], stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
         user_input_shapes, input_elem_num, input_dims, output_num,
         user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, (m_flags & BM_RUNTIME_SHARE_MEM) ? stage->dynamic_ctx_offset : dyn_neuron->dynamic_ctx_offset,
+        stage->ctx_borders, dyn_offset,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         core_list);
@@ -1198,12 +1207,18 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
         output_shape_global_addr,
         core_list);
   } else if (arch == SG2380) {
-    auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+    std::vector<u64> dyn_offset;
+    if (m_flags & BM_RUNTIME_SHARE_MEM) {
+      dyn_offset = stage->dynamic_ctx_offset;
+    } else {
+      auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+      dyn_offset = dyn_neuron->dynamic_ctx_offset;
+    }
     status = bmfunc::bmdnn_2380()->_bmdnn_dynamic_fullnet_(
         m_handles[devid], stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
         user_input_shapes, input_elem_num, input_dims, output_num,
         user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, (m_flags & BM_RUNTIME_SHARE_MEM) ? stage->dynamic_ctx_offset : dyn_neuron->dynamic_ctx_offset,
+        stage->ctx_borders, dyn_offset,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         core_list);
@@ -1228,6 +1243,9 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
     for (int idx = 0; idx < output_num; idx++) {
       output_tensors[idx].shape = output_shape_v[idx].shape;
     }
+  }
+  if (alloc_mem) {
+    free_device_mem(devid, output_shape_mem);
   }
 
   return BM_SUCCESS == status;
@@ -1625,7 +1643,7 @@ std::shared_ptr<dyn_neuron_stage_t> Bmruntime::net_ctx_get_dyn_neuron(net_ctx_t*
   return dyn_neuron;
 }
 
-void Bmruntime::__net_ctx_alloc_dyn_neuron(net_ctx_t* net_ctx, const uint64_t thread_id, const uint64_t dyn_core_mask) {
+void Bmruntime::__net_ctx_alloc_dyn_neuron(net_ctx_t* net_ctx, const size_t thread_id, const size_t dyn_core_mask) {
   std::unique_lock<std::mutex> neuron_stage_lock(net_ctx->neuron_mutex);
   if (net_ctx->dyn_neuron_stage_dict.find(dyn_core_mask) != net_ctx->dyn_neuron_stage_dict.end()) {
     neuron_stage_lock.unlock();
@@ -1773,7 +1791,7 @@ void Bmruntime::fill_subnet_dyn_neuron_tensor(
       bm_tensor_ext.host_mem.addr = host_mem;
     }
 
-    dyn_neuron->subnet_tensor_v.insert(make_pair(tensor_name, bm_tensor_ext));
+    dyn_neuron->subnet_tensor_v[tensor_name] = bm_tensor_ext;
   }
 }
 
@@ -2145,6 +2163,19 @@ bool Bmruntime::launch(const net_cascade_t *net_c,
     dst.emplace_back(mem_cascade_t{net_c->output_names[i], devid, output_tensors[i]});
   }
 
+  // multi cards allreduce use bm_memcpy_p2p
+  // set using_fast_allreduce = false
+  unsigned int card_id = 0;
+  bm_get_card_id(m_handles[0], &card_id);
+  for (auto handle : m_handles) {
+    unsigned int cur_card_id = 0;
+    bm_get_card_id(handle, &cur_card_id);
+    if (cur_card_id != card_id) {
+      using_fast_allreduce = false;
+      break;
+    }
+  }
+
   for (size_t s = 0; s < net_c->step_ids.size(); s++) {
     // TODO: device_num = 2 fast_allreduce still have bug
     if (using_fast_allreduce &&
@@ -2260,9 +2291,7 @@ bool Bmruntime::launch(const net_cascade_t *net_c,
           }
 
           unsigned int chip_num = 0;
-          unsigned int card_id = 0;
           unsigned int card_start_devid = 0;
-          bm_get_card_id(m_handles[0], &card_id);
           bm_get_chip_num_from_card(card_id, &chip_num, &card_start_devid);
           BMRT_ASSERT_INFO((chip_num == 8),
               "Error: Only support [8]chip card allreduce, now is [%d]", chip_num);
