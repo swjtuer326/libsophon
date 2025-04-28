@@ -262,7 +262,7 @@ bm_status_t bm_send_api(bm_handle_t handle, int api_id, const u8 *api,
           "invalid size = 0x%x!\n", size);
     return BM_ERR_PARAM;
   }
-  bm_profile_record_send_api(handle, api_id);
+  bm_profile_record_send_api(handle, api_id, api, 0);
 
 #ifdef USING_CMODEL
 #ifdef BM_TV_GEN
@@ -354,7 +354,7 @@ u64 bm_get_version(bm_handle_t handle) {
 }
 
 bm_status_t bm_thread_sync(bm_handle_t handle) {
-    bm_profile_record_sync_begin(handle);
+    bm_profile_record_sync_begin(handle, 0);
     bm_status_t status = BM_SUCCESS;
 #ifdef USING_CMODEL
     status =  handle->bm_dev->bm_device_sync();
@@ -370,7 +370,7 @@ bm_status_t bm_thread_sync(bm_handle_t handle) {
         status = BM_ERR_FAILURE;
     }
 #endif
-    bm_profile_record_sync_end(handle);
+    bm_profile_record_sync_end(handle, 0);
     return status;
 }
 

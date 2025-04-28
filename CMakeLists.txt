@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 cmake_policy(SET CMP0048 NEW)
 
 project("libsophon"
-    VERSION 0.5.1)
+    VERSION 0.5.2)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -62,6 +62,10 @@ else()
         set(DEB_ARCH "riscv64")
     elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "loongarch64")
         set(DEB_ARCH "loongarch64")
+    elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "sw_64")
+        set(DEB_ARCH "pcie_sw64")
+        link_directories(${LIB_DIR}/lib/)
+        include_directories(${LIB_DIR}/include)
     else()
         message(FATAL_ERROR "Unknown processor:" ${CMAKE_SYSTEM_PROCESSOR})
     endif()
@@ -80,7 +84,7 @@ else()
     else()
         set(CPACK_DEBIAN_LIBSOPHON-DEV_PACKAGE_DEPENDS "libc6 (>= 2.23), sophon-libsophon (= ${CPACK_DEBIAN_PACKAGE_VERSION})")
     endif()
-    set(CPACK_DEBIAN_LIBSOPHON_PACKAGE_DEPENDS "libc6 (>= 2.23), libncurses5 (>= 6.0)")
+    set(CPACK_DEBIAN_LIBSOPHON_PACKAGE_DEPENDS "libc6 (>= 2.23)")
     set(CPACK_DEBIAN_DRIVER_PACKAGE_DEPENDS "dkms")
     # driver package extra
     set(CPACK_DEBIAN_DRIVER_PACKAGE_CONTROL_EXTRA

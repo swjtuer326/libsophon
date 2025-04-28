@@ -27,6 +27,8 @@ bmrt_arch_info::bmrt_arch_info(const string& arch_name)
       target_bmtpu_arch = BM1880;
     } else if (arch_name == "BM1684X") {
       target_bmtpu_arch = BM1684X;
+    } else if (arch_name == "BM1684XE") {
+      target_bmtpu_arch = BM1684XE;
     } else if (arch_name == "BM1688") {
       target_bmtpu_arch = BM1688;
     } else if (arch_name == "BM1690") {
@@ -35,6 +37,8 @@ bmrt_arch_info::bmrt_arch_info(const string& arch_name)
       target_bmtpu_arch = SG2380;
     } else if (arch_name == "MARS3") {
       target_bmtpu_arch = MARS3;
+    } else if (arch_name == "SGTPUV8") {
+      target_bmtpu_arch = SGTPUV8;
     } else {
       BMRT_LOG(FATAL, "Error: unknown processor name [%s]",  arch_name.c_str());
     }
@@ -50,6 +54,7 @@ int bmrt_arch_info::get_npu_num()
     case BM1682:
     case BM1684:
     case BM1684X:
+    case BM1684XE:
       npu_num = 64;
       break;
     case BM1880:
@@ -75,6 +80,7 @@ int bmrt_arch_info::get_eu_num(bm_data_type_t dtype)
       break;
     case BM1880:
     case BM1684X:
+    case BM1684XE:
       eu_num = 16;
       break;
     case BM1688:
@@ -96,6 +102,7 @@ int bmrt_arch_info::get_lmem_size()
   switch(sta_bmtpu_ptr->target_bmtpu_arch) {
     case BM1682:
     case BM1684X:
+    case BM1684XE:
       lmem_size = (1<<18);  //256KB
       break;
     case BM1684:
@@ -104,11 +111,13 @@ int bmrt_arch_info::get_lmem_size()
     case BM1688:
     case SG2380:
       lmem_size = (1<<17);  //128KB
+      break;
     case BM1880:
       lmem_size = (1<<16);  //64KB
       break;
     case BM1690:
       lmem_size = 1 << 18; // 256KB
+      break;
     default:
       BMRT_LOG(FATAL, "Unknown bmtpu arch");
   }
@@ -127,6 +136,7 @@ u64 bmrt_arch_info::get_gmem_start()
     case BM1684:
     case BM1880:
     case BM1684X:
+    case BM1684XE:
     case BM1688:
       gmem_start = 0x100000000;
       break;
@@ -169,6 +179,7 @@ u64 bmrt_arch_info::get_gmem_offset_soc()
     case BM1684:
     case BM1880:
     case BM1684X:
+    case BM1684XE:
     case BM1688:
     case BM1690:
     case SG2380:
@@ -190,6 +201,7 @@ int bmrt_arch_info::get_lmem_banks()
       lmem_banks = 8;
       break;
     case BM1684X:
+    case BM1684XE:
     case BM1688:
     case BM1690:
     case SG2380:
@@ -214,7 +226,9 @@ u64 bmrt_arch_info::get_gmem_cmd_start_offset()
     case BM1684:
     case BM1880:
     case BM1684X:
+    case BM1684XE:
     case MARS3:
+    case SGTPUV8:
     case BM1688:
     case BM1690:
     case SG2380:
@@ -241,6 +255,7 @@ u64 bmrt_arch_info::get_ctx_start_addr()
       ctx_start_addr = (get_gmem_start() + 0x5000000 + 0x100000);
       break;
     case BM1684X:
+    case BM1684XE:
     case BM1688:
     case BM1690:
     case SG2380:
@@ -336,10 +351,12 @@ u32 bmrt_arch_info::get_gdma_cmd_num()
 u64 bmrt_arch_info::addr_mask() {
   u64 mask = 0xffffffffffffffff;
   if (sta_bmtpu_ptr->target_bmtpu_arch == BM1688) {
-    // relative address, only lower 35bit is valie
+    // relative address, only lower 35bit   is valie
     mask = (1ull << 35) - 1;
   } else if (sta_bmtpu_ptr->target_bmtpu_arch == BM1690 ||
-             sta_bmtpu_ptr->target_bmtpu_arch == SG2380) {
+             sta_bmtpu_ptr->target_bmtpu_arch == SG2380 ||
+             sta_bmtpu_ptr->target_bmtpu_arch == MARS3 ||
+             sta_bmtpu_ptr->target_bmtpu_arch == SGTPUV8) {
     mask = (1ull << 40) - 1;
   }
   return mask;

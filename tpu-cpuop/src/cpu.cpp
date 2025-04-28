@@ -120,7 +120,7 @@ void* bmcpu_init()
         bmcpu_handle_->bmcpu_user_dtype_    = bmcpu_user_dtype_;
         bmcpu_handle_->user_cpu_handle      = bmcpu_user_init_();
         #ifdef __linux__
-        printf("open usercpu.so, init user_cpu_init \n");
+        // printf("open usercpu.so, init user_cpu_init \n");
         #else
         printf("open usercpu.dll, init user_cpu_init \n");
         #endif
