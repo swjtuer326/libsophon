@@ -642,17 +642,24 @@ static int fill_command_queue(DECODER_HANDLE *pst_handle)
         } else if (pst_handle->open_param->bitstreamMode == BS_MODE_INTERRUPT) {
             if (pst_handle->seq_status != SEQ_DECODE_FINISH)
                 pst_handle->decode_one_frame = 1;
+
+            if (pst_handle->seq_status == SEQ_INIT_NON) {
+                Uint32 room;
+                VPU_DecGetBitstreamBuffer(pst_handle->handle, NULL, NULL, &room);
+                if (room == (pst_handle->bitstream_size - 1))//stream buffer is empty
+                    pst_handle->decode_one_frame = 0;
+            }
         }
     }
 
     if (pst_handle->decode_one_frame) {
         if (pst_handle->seq_status == SEQ_INIT_NON) {
-            pst_handle->seq_status = SEQ_INIT_START;
             ret = VPU_DecIssueSeqInit(pst_handle->handle);
             if (RETCODE_SUCCESS != ret) {
                 VLOG(ERR, "VPU_DecIssueSeqInit failed! ret=%08x\n", ret);
                 return ret;
             }
+            pst_handle->seq_status = SEQ_INIT_START;
         }
 
         if (pst_handle->seq_status == SEQ_DECODE_START) {

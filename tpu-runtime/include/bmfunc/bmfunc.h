@@ -24,9 +24,6 @@ public:
   static bmdnn_func_1684x *bmdnn_1684x() {
     return (bmdnn_func_1684x *)(sta_bmfunc_ptr->bmdnn_fn);
   }
-  static bmdnn_func_1684xe *bmdnn_1684xe() {
-    return (bmdnn_func_1684xe *)(sta_bmfunc_ptr->bmdnn_fn);
-  }
   static bmdnn_func_1688 *bmdnn_1688() {
     return (bmdnn_func_1688 *)(sta_bmfunc_ptr->bmdnn_fn);
   }

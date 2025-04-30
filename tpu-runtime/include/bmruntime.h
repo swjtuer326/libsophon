@@ -293,6 +293,7 @@ struct net_ctx_t {
   int32_t step_id = 0;
   bool in_cascade = false;
   int32_t addr_mode = 0;
+  bm_device_mem_t io_alone_max_mem;
   vector<int> input_from; // input is loaded from which device
   vector<int> input_hidden_v;
   vector<int> input_index_v;
@@ -461,6 +462,9 @@ class Bmruntime {
 
   inline void set_flags(uint32_t flags) {
     m_flags = flags;
+    if (flags & BM_RUNTIME_SHARE_MEM) {
+      m_flags |= BM_RUNTIME_SHARE_DYNMEM;
+    }
   }
 
   inline int get_network_number()

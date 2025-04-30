@@ -13,7 +13,9 @@
 #include "bmodel.hpp"
 #include "bmruntime.h"
 #include "bmlib_runtime.h"
+#ifndef LITE_BUILD
 #include "kernel_module.h"
+#endif
 #include <fcntl.h>
 
 #define SP(D, T) (std::shared_ptr<T>((D), std::default_delete<T []>()))
@@ -263,8 +265,7 @@ static uint32_t get_bdc_cmd_len(const u8 *bdc_buffer, u64 start_offset,
   case BM1688:
   case MARS3:
   case SGTPUV8:
-  case BM1684X:
-  case BM1684XE: {
+  case BM1684X: {
     u32 cmd_buf[2];
     memcpy(cmd_buf, bdc_buffer + start_offset, sizeof(cmd_buf));
     u32 tsk_type = (cmd_buf[1] >> 9) & 0xf;
@@ -316,7 +317,7 @@ static uint32_t get_gdma_cmd_len(const u8 *gdma_buffer, u64 start_offset,
     if (last_cmd) {
       len = ALIGN(start_offset + 16, 128) - start_offset;
     }
-  } else if (BM1684X == arch || BM1684XE == arch) {
+  } else if (BM1684X == arch) {
     // sys end
     if (last_cmd) {
       len = ALIGN(start_offset + 16, 128) - start_offset;
@@ -920,6 +921,7 @@ bool Bmruntime::fill_net_ctx(
       BMRT_LOG(WRONG, "Net[%s] has no parameter.", net_ctx->net_name.c_str());
     return false;
   }
+  u64 model_neuron_size = model_ctx->model()->neuron_size();
   // fill net_ctx info by first NetParameter
   auto param = params->Get(0);
   net_ctx->core_num = param->core_num() != 0 ? param->core_num() : 1;
@@ -956,26 +958,26 @@ bool Bmruntime::fill_net_ctx(
   }
 
   // alloc ctx memory
-  std::vector<u64> max_ctx_sizes;
+  std::vector<u64> max_ctx_sizes(1, model_neuron_size);
   bool multi_subnet = false;
   for (u32 stage_idx = 0; stage_idx < params->size(); stage_idx++) {
     auto stage = params->Get(stage_idx);
     std::vector<u64> stage_sizes;
     auto fb_sizes = stage->ctx_sizes();
-    if (fb_sizes)
-    {
+    if (fb_sizes) {
       stage_sizes = std::vector<u64>(fb_sizes->begin(), fb_sizes->end());
-    } else if(stage->ctx_size()>0){
+    } else if(stage->ctx_size() > 0) {
       stage_sizes = std::vector<u64>(1, stage->ctx_size());
     }
     size_t size_min = std::min<size_t>(stage_sizes.size(), max_ctx_sizes.size()), i;
-    for (i = 0; i < size_min; ++i)
-    {
-      if (stage_sizes[i] > max_ctx_sizes[i])
+    for (i = 0; i < size_min; ++i) {
+      if (stage_sizes[i] > max_ctx_sizes[i]) {
         max_ctx_sizes[i] = stage_sizes[i];
+      }
     }
-    for (; i < stage_sizes.size(); ++i)
+    for (; i < stage_sizes.size(); ++i) {
       max_ctx_sizes.push_back(stage_sizes[i]);
+    }
 
     auto subnet = params->Get(stage_idx)->sub_net();
     if (subnet != NULL && subnet->size() > 1) {
@@ -1020,7 +1022,7 @@ bool Bmruntime::fill_net_ctx(
 
   if (!max_ctx_sizes.empty()) {
     if (m_flags & BM_RUNTIME_SHARE_MEM) {
-      if (multi_subnet) {
+      if (multi_subnet && !(m_flags & BM_RUNTIME_SHARE_DYNMEM)) {
         // Own an neuron memory if subnet number > 1
         net_ctx->neuron_mem.resize(max_ctx_sizes.size());
         for (u32 i = 0; i < max_ctx_sizes.size(); ++i)
@@ -1059,18 +1061,22 @@ bool Bmruntime::fill_net_ctx(
   }
 
   if (net_ctx->addr_mode == ADDR_MODE_IO_ALONE) {
-    // addr alone allocate io mem
+    // find max_size
+    u64 max_io_size = 0;
     for (u32 stage_idx = 0; stage_idx < params->size(); stage_idx++) {
       auto &s = stages[stage_idx];
-      // only alloc device mem for stage_idx = 0
-      // not to alloc device mem for stage_idx > 0
-      if (stage_idx == 0) {
-        s.io_mem = alloc_device_mem(devid, s.io_size, "io_mem");
-        s.io_offset = bm_mem_get_device_addr(s.io_mem) - s.io_start;
-      } else {
-        s.io_mem = stages[0].io_mem;
-        s.io_offset = stages[0].io_offset;
+      if (s.io_size > max_io_size) {
+        max_io_size = s.io_size;
       }
+    }
+    BMRT_ASSERT_INFO(max_io_size > 0, "Error: io size is 0 for io alone");
+    net_ctx->io_alone_max_mem = alloc_device_mem(devid, max_io_size, "io_mem");
+    // addr alone allocate io mem
+    auto io_addr = bm_mem_get_device_addr(net_ctx->io_alone_max_mem);
+    for (u32 stage_idx = 0; stage_idx < params->size(); stage_idx++) {
+      auto &s = stages[stage_idx];
+      s.io_mem = bm_mem_from_device(io_addr, s.io_size);
+      s.io_offset = io_addr - s.io_start;
     }
   }
 
@@ -1873,10 +1879,9 @@ bool Bmruntime::load_bmodel(ModelCtx* model_ctx)
       // So there are bmodels claim to be BM1686 but are actually BM1684X.
       // And we happily allow this unspeakable abomination.
       if(model_chip == "BM1686" && bmrt_arch_info::get_bmtpu_name() == "BM1684X") {
-      } else if (model_chip == "BM1684XE" && bmrt_arch_info::get_bmtpu_name() == "BM1684X") {
       } else if(model_chip == "CV186X" && bmrt_arch_info::get_bmtpu_name() == "BM1688") {
-      } else if(model_chip == "SGTPUV8") {
-      } else if(model_chip == "MARS3") {
+      } else if(model_chip == "MARS3"){
+      } else if(model_chip == "SGTPUV8"){
       } else if(model_chip == "BM1686" && bmrt_arch_info::get_bmtpu_name() == "BM1688") {
       } else if(model_chip == "SG2380" && bmrt_arch_info::get_bmtpu_name() == "SG2380") {
       } else {
@@ -2135,7 +2140,7 @@ void Bmruntime::load_tpu_module(ModelCtx* model_ctx) {
     BMRT_LOG(INFO, "force loading firmare in runtime because BMRUNTIME_USING_INNER_FIRMWARE env is set");
   }
   size_t firmware_size = 0;
-  #ifdef __linux__
+  #if defined(__linux__) && !defined(LITE_BUILD)
   if (bmrt_arch_info::get_bmtpu_arch() == BM1684X){
     firmware_data = kernel_module_data_1684x;
     firmware_size = sizeof(kernel_module_data_1684x);

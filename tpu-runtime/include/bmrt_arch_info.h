@@ -19,7 +19,6 @@ typedef enum bmtpu_arch {
   BM1684,
   BM1880,
   BM1684X,
-  BM1684XE,
   BM1688,
   BM1690,
   SGTPUV8,

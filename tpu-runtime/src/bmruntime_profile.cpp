@@ -59,7 +59,7 @@ BMProfile::BMProfile(Bmruntime* p_bmrt): p_bmrt(p_bmrt), enabled(false) {
     auto arch = bmrt_arch_info::get_bmtpu_arch();
     if(arch== BM1684){
       device = decltype(device)(new bm1684_profile::BMProfileDevice(this));
-    } else if(arch == BM1684X || arch == BM1684XE){
+    } else if(arch == BM1684X){
       device = decltype(device)(new bm1684x_profile::BMProfileDevice(this));
     } else if (arch == BM1688) {
       device = decltype(device)(new bm1688_profile::BMProfileDevice(this));

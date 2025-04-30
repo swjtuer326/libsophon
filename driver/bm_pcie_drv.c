@@ -1174,8 +1174,8 @@ static int bmdrv_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	rc = bmdrv_fw_load(bmdi, NULL, NULL);
 	if (rc) {
-		pr_err("bmdrv: firmware load failed!\n");
-		goto err_enable_attr;
+		pr_err("bmdrv: firmware load failed! continue run\n");
+		// goto err_enable_attr;
 	}
 
 	bmdrv_smbus_set_default_value(pdev, bmdi);

@@ -20,8 +20,6 @@ bmfunc::bmfunc(const string &arch_name) {
     bmdnn_fn = new bmdnn_func_1682();
   } else if (arch == BM1684X) {
     bmdnn_fn = new bmdnn_func_1684x();
-  } else if (arch == BM1684XE) {
-    bmdnn_fn = new bmdnn_func_1684xe();
   } else if (arch == BM1688) {
     bmdnn_fn = new bmdnn_func_1688();
   } else if (arch == BM1690) {

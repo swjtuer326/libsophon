@@ -826,7 +826,6 @@ void Bmruntime::convert_cmd(u32* cmd, int engine_id, bool last_cmd, u64 start_ad
       }
       break;
     case BM1684X:
-    case BM1684XE:
       if (id == ENGINE_GDMA && !last_cmd) {
         u64 src_addr = ((u64)(cmd[17] & 0xff) << 32) | ((u64)cmd[16]);
         u64 dst_addr = ((u64)(cmd[19] & 0xff) << 32) | ((u64)cmd[18]);
@@ -1039,7 +1038,7 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
     user_input_shapes[idx] = (int*)input_tensors[idx].shape.dims;
     input_dims[idx] = input_tensors[idx].shape.num_dims;
     auto input_dtype = 0;
-    if (arch == BM1684X || arch == BM1684XE || arch == BM1688 || arch == BM1690 || arch == SG2380) {
+    if (arch == BM1684X || arch == BM1688 || arch == BM1690 || arch == SG2380) {
       input_dtype = input_tensors[idx].dtype;
     } else {
       if (input_tensors[idx].dtype == BM_FLOAT32) {
@@ -1165,34 +1164,36 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         net_ctx->do_allreduce == 1 ? &(net_ctx->allreduce_param) : NULL);
-  } else if (arch == BM1684XE) {
-    auto func_id = net_ctx->kernel_module_->get_dynamic_fullnet_func_id(core_list);
-    status = bmfunc::bmdnn_1684xe()->_bmdnn_dynamic_fullnet_(
-        m_handles[devid], func_id[0], stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
-        user_input_shapes, input_elem_num, input_dims, output_num,
-        user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, stage->dynamic_ctx_offset,
-        stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
-        output_shape_global_addr,
-        net_ctx->do_allreduce == 1 ? &(net_ctx->allreduce_param) : NULL);
   } else if (arch == BM1688) {
-    auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+    std::vector<u64> dyn_offset;
+    if (m_flags & BM_RUNTIME_SHARE_MEM) {
+      dyn_offset = stage->dynamic_ctx_offset;
+    } else {
+      auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+      dyn_offset = dyn_neuron->dynamic_ctx_offset;
+    }
     auto func_id = net_ctx->kernel_module_->get_dynamic_fullnet_func_id(core_list);
     status = bmfunc::bmdnn_1688()->_bmdnn_dynamic_fullnet_(
         m_handles[devid], func_id, stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
         user_input_shapes, input_elem_num, input_dims, output_num,
         user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, (m_flags & BM_RUNTIME_SHARE_MEM) ? stage->dynamic_ctx_offset : dyn_neuron->dynamic_ctx_offset,
+        stage->ctx_borders, dyn_offset,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         core_list);
   } else if (arch == BM1690) {
-    auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+    std::vector<u64> dyn_offset;
+    if (m_flags & BM_RUNTIME_SHARE_MEM) {
+      dyn_offset = stage->dynamic_ctx_offset;
+    } else {
+      auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+      dyn_offset = dyn_neuron->dynamic_ctx_offset;
+    }
     status = bmfunc::bmdnn_2260()->_bmdnn_dynamic_fullnet_(
         m_handles[devid], stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
         user_input_shapes, input_elem_num, input_dims, output_num,
         user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, (m_flags & BM_RUNTIME_SHARE_MEM) ? stage->dynamic_ctx_offset : dyn_neuron->dynamic_ctx_offset,
+        stage->ctx_borders, dyn_offset,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         core_list);
@@ -1206,12 +1207,18 @@ bool Bmruntime::launch_ir(net_ctx_t* net_ctx, net_stage_t* stage,
         output_shape_global_addr,
         core_list);
   } else if (arch == SG2380) {
-    auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+    std::vector<u64> dyn_offset;
+    if (m_flags & BM_RUNTIME_SHARE_MEM) {
+      dyn_offset = stage->dynamic_ctx_offset;
+    } else {
+      auto dyn_neuron = net_ctx_get_dyn_neuron(net_ctx, dyn_core_mask);
+      dyn_offset = dyn_neuron->dynamic_ctx_offset;
+    }
     status = bmfunc::bmdnn_2380()->_bmdnn_dynamic_fullnet_(
         m_handles[devid], stage->core_commands[0].ir_mem.addr, stage->core_commands[0].ir_mem.dword_len, input_num, user_input_global_addrs,
         user_input_shapes, input_elem_num, input_dims, output_num,
         user_output_global_addrs, stage->dynamic_ctx_start,
-        stage->ctx_borders, (m_flags & BM_RUNTIME_SHARE_MEM) ? stage->dynamic_ctx_offset : dyn_neuron->dynamic_ctx_offset,
+        stage->ctx_borders, dyn_offset,
         stage->dynamic_coeff_offset, stage->io_start, stage->io_offset, true,
         output_shape_global_addr,
         core_list);
@@ -1348,7 +1355,7 @@ Bmruntime::fill_tpu_net_info(net_ctx_t *net_ctx, net_stage_t *stage,
     net_info.kernel_func_ids = net_ctx->kernel_module_->get_multi_fullnet_func_id(core_list);
   }
   net_info.do_allreduce = net_ctx->do_allreduce;
-  if ((bmrt_arch_info::get_bmtpu_arch() == BM1684X || bmrt_arch_info::get_bmtpu_arch() == BM1684XE) && net_ctx->do_allreduce == 1) {
+  if (bmrt_arch_info::get_bmtpu_arch() == BM1684X && net_ctx->do_allreduce == 1) {
     net_info.allreduce_param = net_ctx->allreduce_param;
   }
   net_info.addr_mode = net_ctx->addr_mode;
@@ -1636,7 +1643,7 @@ std::shared_ptr<dyn_neuron_stage_t> Bmruntime::net_ctx_get_dyn_neuron(net_ctx_t*
   return dyn_neuron;
 }
 
-void Bmruntime::__net_ctx_alloc_dyn_neuron(net_ctx_t* net_ctx, const uint64_t thread_id, const uint64_t dyn_core_mask) {
+void Bmruntime::__net_ctx_alloc_dyn_neuron(net_ctx_t* net_ctx, const size_t thread_id, const size_t dyn_core_mask) {
   std::unique_lock<std::mutex> neuron_stage_lock(net_ctx->neuron_mutex);
   if (net_ctx->dyn_neuron_stage_dict.find(dyn_core_mask) != net_ctx->dyn_neuron_stage_dict.end()) {
     neuron_stage_lock.unlock();
@@ -2473,7 +2480,7 @@ bool Bmruntime::memcpy_d2d_stride_ex_parallel(bm_tensor_t dst_tensors[],
                                               bm_shape_t shapes[],
                                               int tensor_num[],
                                               int device_num) {
-  BMRT_ASSERT(bmrt_arch_info::get_bmtpu_arch() == BM1684X || bmrt_arch_info::get_bmtpu_arch() == BM1684XE);
+  BMRT_ASSERT(bmrt_arch_info::get_bmtpu_arch() == BM1684X);
   std::vector<std::vector<tpu_kernel_global_move_1684x_t>> params(device_num);
   int processed_num = 0;
   for (int i = 0; i < device_num; ++i) {
