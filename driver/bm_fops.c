@@ -335,12 +335,12 @@ static long bm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				}
 
 				mutex_lock(&bmdi->c_attr.attr_mutex);
-				bmdev_memcpy_d2s_internal(bmdi, (void *)buffer_r, 0x10000FF4,sizeof(buffer_r));
+				bmdev_memcpy_d2s_internal(bmdi, (void *)buffer_r, 0x10000FF4,sizeof(buffer_r), false);
 				buffer_w[0] = buffer_r[0]|(1<<0);
-				ret = bmdev_memcpy_s2d_internal(bmdi, 0x10000FF4, (void *)buffer_w, sizeof(buffer_w));
+				ret = bmdev_memcpy_s2d_internal(bmdi, 0x10000FF4, (void *)buffer_w, sizeof(buffer_w), false);
 				msleep(delay);
 				mutex_unlock(&bmdi->c_attr.attr_mutex);
-				bmdev_memcpy_s2d_internal(bmdi, 0x10000FF4, (void *)buffer_r, sizeof(buffer_r));
+				bmdev_memcpy_s2d_internal(bmdi, 0x10000FF4, (void *)buffer_r, sizeof(buffer_r), false);
 
 				bmdi->status_reset = A53_RESET_STATUS_FALSE;
 				break;
@@ -625,8 +625,16 @@ static long bm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		ret = bmdrv_gmem_ioctl_alloc_mem_ion(bmdi, file, arg);
 		break;
 
+	case BMDEV_ALLOC_GMEM_ION_U64:
+		ret = bmdrv_gmem_ioctl_alloc_mem_ion_u64(bmdi, file, arg);
+		break;
+
 	case BMDEV_FREE_GMEM:
 		ret = bmdrv_gmem_ioctl_free_mem(bmdi, file, arg);
+		break;
+
+	case BMDEV_FREE_GMEM_U64:
+		ret = bmdrv_gmem_ioctl_free_mem_u64(bmdi, file, arg);
 		break;
 
 	case BMDEV_TOTAL_GMEM:

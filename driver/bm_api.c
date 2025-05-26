@@ -1261,6 +1261,7 @@ int bmdrv_thread_sync_api(struct bm_device_info *bmdi, struct file *file, unsign
 
 	pr_err("bm-sophon%d %s, wait api timeout, wait %dms, core_id=%d\n",
 		 bmdi->dev_index, __func__, timeout_ms, core_id);
+	bmdev_dump_msgfifo(bmdi, BM_MSGFIFO_CHANNEL_XPU, core_id);
 	if (bmdev_debug_tpusys(bmdi, core_id))
 		return -EBUSY;
 	else

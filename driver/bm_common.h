@@ -72,7 +72,7 @@ extern uint32_t tpu_log_lv;
 
 /* specify if platform is palladium */
 #define PALLADIUM_CLK_RATIO 4000
-#define DELAY_MS 20000
+#define DELAY_MS 120000
 #define POLLING_MS 1
 
 #define BL1_VERSION_BASE		0x25050100

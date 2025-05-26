@@ -63,12 +63,12 @@ unsigned int vc_ion_free(void* ion_handle)
 
 int vc_memcpy_s2d(void *src, uint64_t dst, uint32_t size)
 {
-	return bmdev_memcpy_s2d_internal(g_bmdi, dst, src, size);
+	return bmdev_memcpy_s2d_internal(g_bmdi, dst, src, size, true);
 }
 
 int vc_memcpy_d2s(void *dst, uint64_t src, uint32_t size)
 {
-	return bmdev_memcpy_d2s_internal(g_bmdi, dst, src, size);
+	return bmdev_memcpy_d2s_internal(g_bmdi, dst, src, size, true);
 }
 
 int vc_memcpy_c2c(uint64_t dst, uint64_t src, uint32_t size)

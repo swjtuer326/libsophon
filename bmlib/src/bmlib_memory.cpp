@@ -660,7 +660,7 @@ static int bm_alloc_gmem_u64(bm_handle_t ctx, bm_device_mem_u64_t *pmem, int hea
 			ret = ioctl(ctx->ion_fd, ION_IOC_ALLOC, &alloc_data);
 
 			if (ret == 0) {
-				ioctl(ctx->dev_fd, BMDEV_ALLOC_GMEM_ION, pmem);
+				ioctl(ctx->dev_fd, BMDEV_ALLOC_GMEM_ION_U64, pmem);
 				break;
 			}
 			}
@@ -747,7 +747,7 @@ static bm_status_t bm_free_gmem_u64(bm_handle_t ctx, bm_device_mem_u64_t *pmem) 
   	}
 #endif
 	bm_profile_record_mem_begin(ctx);
-	ret = platform_ioctl(ctx, BMDEV_FREE_GMEM, pmem);
+	ret = platform_ioctl(ctx, BMDEV_FREE_GMEM_U64, pmem);
 	if (ret != 0) {
 		bmlib_log(BMLIB_MEMORY_LOG_TAG, BMLIB_LOG_ERROR,
 		"bm free gmem failed, ioclt ret = %d:%d\n", ret, __LINE__);

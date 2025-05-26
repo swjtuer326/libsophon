@@ -79,7 +79,7 @@ static int bmdrv_load_firmware(struct bm_device_info *bmdi, struct file *file, u
 {
 	int ret = 0x0;
 
-	if (bmdev_memcpy_s2d_internal(bmdi, dst, firmware, word_num * sizeof(u32))) {
+	if (bmdev_memcpy_s2d_internal(bmdi, dst, firmware, word_num * sizeof(u32), false)) {
 		pr_err("bmdrv: memcpy s2d firmware failed!\n");
 		return -EFAULT;
 	}
@@ -366,7 +366,7 @@ static int bmdrv_eu_table_load(struct bm_device_info *bmdi)
 	}
 
 	if (bmdev_memcpy_s2d_internal(bmdi, bmdi->gmem_info.resmem_info.eutable_addr,
-			      eu_cmd_warp, EU_CMD_LEN * sizeof(u32))) {
+			      eu_cmd_warp, EU_CMD_LEN * sizeof(u32), false)) {
 		pr_err("bmdrv: load eu table failed!\n");
 		kfree(eu_cmd_warp);
 		return -EFAULT;

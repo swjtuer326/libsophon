@@ -365,27 +365,27 @@ static int bmdrv_get_boot_loader_version(struct bm_device_info *bmdi)
 	int ret;
 
 	bmdi->cinfo.version.bl1_version = kmalloc(BL1_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl1_version, BL1_VERSION_BASE, BL1_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl1_version, BL1_VERSION_BASE, BL1_VERSION_SIZE, false);
 	if (ret)
 		goto err_bl1_version;
 
 	bmdi->cinfo.version.bl2_version = kmalloc(BL2_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl2_version, BL2_VERSION_BASE, BL2_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl2_version, BL2_VERSION_BASE, BL2_VERSION_SIZE, false);
 	if (ret)
 		goto err_bl2_version;
 
 	bmdi->cinfo.version.bl31_version = kmalloc(BL31_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl31_version, BL31_VERSION_BASE, BL31_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl31_version, BL31_VERSION_BASE, BL31_VERSION_SIZE, false);
 	if (ret)
 		goto err_bl31_version;
 
 	bmdi->cinfo.version.uboot_version = kmalloc(UBOOT_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.uboot_version, UBOOT_VERSION_BASE, UBOOT_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.uboot_version, UBOOT_VERSION_BASE, UBOOT_VERSION_SIZE, false);
 	if (ret)
 		goto err_uboot_version;
 
 	bmdi->cinfo.version.chip_version = kmalloc(CHIP_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.chip_version, CHIP_VERSION_BASE, CHIP_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.chip_version, CHIP_VERSION_BASE, CHIP_VERSION_SIZE, false);
 	if (ret)
 		goto err_chip_version;
 

@@ -44,6 +44,7 @@
 #include "bm1688/bm1688_irq.h"
 #include "bm1688/bm1688_card.h"
 #include "bm1688/bm1688_msgfifo.h"
+#include "bm1688/bm1688_base64.h"
 //#include "bm1688/ddr/ddr.h"
 #include "bm_card.h"
 #include "bm_napi.h"
@@ -411,7 +412,7 @@ static int bmdrv_pci_init(struct bm_device_info *bmdi, struct pci_dev *pdev)
 	cinfo->bmdrv_map_bar(bmdi, pdev);
 
 	io_init(bmdi);
-
+	cinfo->tpu_core_num = base_get_core_num(bmdi);
 	/* init pci DMA attributes */
 	/* set pci card as DMA master */
 	pci_set_master(pdev);
@@ -763,9 +764,9 @@ static void bmdrv_set_a53_boot_args(struct bm_device_info *bmdi)
 
 	if (bmdi->cinfo.chip_id == BM1684_DEVICE_ID) {
 		flag = SKIP_PCIEI;
-		(void)bmdev_memcpy_s2d_internal(bmdi, BOOT_ARGS_REG_1684, (const void *)&flag, sizeof(flag));
+		(void)bmdev_memcpy_s2d_internal(bmdi, BOOT_ARGS_REG_1684, (const void *)&flag, sizeof(flag), false);
 		flag = FIP_SRC_SPIF;
-		(void)bmdev_memcpy_s2d_internal(bmdi, FIP_SOURCE_REG_1684, (const void *)&flag, sizeof(flag));
+		(void)bmdev_memcpy_s2d_internal(bmdi, FIP_SOURCE_REG_1684, (const void *)&flag, sizeof(flag), false);
 	} else if (bmdi->cinfo.chip_id == BM1684X_DEVICE_ID) {
 		flag = top_reg_read(bmdi, TOP_BOOT_ARGS_REG_1684X);
 		flag &= ~FIP_LOADED;
@@ -783,7 +784,7 @@ static u32 bmdrv_get_a53_boot_args(struct bm_device_info *bmdi)
 	u32 flag;
 
 	if (bmdi->cinfo.chip_id == BM1684_DEVICE_ID) {
-		if (0 != bmdev_memcpy_d2s_internal(bmdi, &flag, BOOT_ARGS_REG_1684, sizeof(flag))) {
+		if (0 != bmdev_memcpy_d2s_internal(bmdi, &flag, BOOT_ARGS_REG_1684, sizeof(flag), false)) {
 			pr_err("bmdrv: reset bcmcpu read flag 0x%x fail!\n", flag);
 		}
 	} else if (bmdi->cinfo.chip_id == BM1684X_DEVICE_ID) {
@@ -1076,12 +1077,12 @@ static int bmdrv_get_boot_loader_version(struct bm_device_info *bmdi)
 	int ret;
 
 	bmdi->cinfo.version.bl1_version = kmalloc(BL1_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl1_version, BL1_VERSION_BASE, BL1_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl1_version, BL1_VERSION_BASE, BL1_VERSION_SIZE, false);
 	if(ret)
 		return -EBUSY;
 
 	bmdi->cinfo.version.bl2_version = kmalloc(BL2_VERSION_SIZE, GFP_KERNEL);
-	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl2_version, BL2_VERSION_BASE, BL2_VERSION_SIZE);
+	ret = bmdev_memcpy_d2s_internal(bmdi, bmdi->cinfo.version.bl2_version, BL2_VERSION_BASE, BL2_VERSION_SIZE, false);
 	if(ret)
 		return -EBUSY;
 
@@ -1091,9 +1092,9 @@ static int bmdrv_get_boot_loader_version(struct bm_device_info *bmdi)
 static void bmdrv_record_boot_loader_version(struct bm_device_info *bmdi)
 {
 	if(bmdi->cinfo.version.bl1_version[0] == 'v')
-		bmdev_memcpy_s2d_internal(bmdi, BL1_VERSION_BASE, (void *)bmdi->cinfo.version.bl1_version, BL1_VERSION_SIZE);
+		bmdev_memcpy_s2d_internal(bmdi, BL1_VERSION_BASE, (void *)bmdi->cinfo.version.bl1_version, BL1_VERSION_SIZE, false);
 	if(bmdi->cinfo.version.bl2_version[0] == 'v')
-		bmdev_memcpy_s2d_internal(bmdi, BL2_VERSION_BASE, (void *)bmdi->cinfo.version.bl2_version, BL2_VERSION_SIZE);
+		bmdev_memcpy_s2d_internal(bmdi, BL2_VERSION_BASE, (void *)bmdi->cinfo.version.bl2_version, BL2_VERSION_SIZE, false);
 
 	kfree(bmdi->cinfo.version.bl1_version);
 	kfree(bmdi->cinfo.version.bl2_version);
@@ -1316,7 +1317,7 @@ static void bmdrv_pci_remove(struct pci_dev *pdev)
 	pm_runtime_dont_use_autosuspend(cinfo->device);
 	pm_runtime_set_autosuspend_delay(cinfo->device, -1);
 #endif
-	// bmdrv_ctrl_del_dev(bmci, bmdi);
+	bmdrv_ctrl_del_dev(bmci, bmdi);
 
 	if ((dev_count == 0) && (module_exit == 1))
 		bmdrv_remove_bmci();

@@ -422,7 +422,7 @@ int bmdev_memcpy_2d_s2d(struct bm_device_info *bmdi, struct file *file, struct b
 }
 
 //for now, ignore mmu mode in memcpy_s2d_internal
-int bmdev_memcpy_s2d_internal(struct bm_device_info *bmdi, u64 dst, const void *src, u32 size)
+int bmdev_memcpy_s2d_internal(struct bm_device_info *bmdi, u64 dst, const void *src, u32 size, bool intr)
 {
 	u32 pass_idx = 0;
 	u32 cur_addr_inc = 0;
@@ -446,7 +446,7 @@ int bmdev_memcpy_s2d_internal(struct bm_device_info *bmdi, u64 dst, const void *
 		bmdrv_get_stagemem(bmdi, &p_addr,&v_addr, HOST2CHIP, &index);
 		memcpy(v_addr, src_cpy, size_step);
 		bmdev_construct_cdma_arg(&cdma_arg, p_addr & 0xffffffffff,
-				dst + cur_addr_inc, size_step, HOST2CHIP, false, false);
+				dst + cur_addr_inc, size_step, HOST2CHIP, intr, false);
 		if (memcpy_info->bm_dual_cdma_transfer(bmdi, NULL, &cdma_arg, true)) {
 			bmdrv_free_stagemem(bmdi, HOST2CHIP, index);
 			return -EBUSY;
@@ -457,7 +457,7 @@ int bmdev_memcpy_s2d_internal(struct bm_device_info *bmdi, u64 dst, const void *
 	return 0;
 }
 
-int bmdev_memcpy_d2s_internal(struct bm_device_info *bmdi, void *dst, u64 src, u32 size)
+int bmdev_memcpy_d2s_internal(struct bm_device_info *bmdi, void *dst, u64 src, u32 size, bool intr)
 {
 	u32 pass_idx = 0;
 	u32 cur_addr_inc = 0;
@@ -482,7 +482,7 @@ int bmdev_memcpy_d2s_internal(struct bm_device_info *bmdi, void *dst, u64 src, u
 		bmdrv_get_stagemem(bmdi, &p_addr,&v_addr, CHIP2HOST, &index);
 		bmdev_construct_cdma_arg(&cdma_arg, src + cur_addr_inc,
 			p_addr & 0xffffffffff,
-			size_step, CHIP2HOST, false, false);
+			size_step, CHIP2HOST, intr, false);
 		if (memcpy_info->bm_dual_cdma_transfer(bmdi, NULL, &cdma_arg, true)) {
 			bmdrv_free_stagemem(bmdi, CHIP2HOST, index);
 			return -EBUSY;
