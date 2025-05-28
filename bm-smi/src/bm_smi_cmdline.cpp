@@ -16,7 +16,6 @@ DEFINE_string(file, "", "target file to save smi log.");
 DEFINE_int32(lms, 500, "sample interval in loop mode.");
 DEFINE_bool(loop, true, "true is for loop mode, false is for only once mode.");
 DEFINE_bool(core_util, false, "show every tpu core util.");
-DEFINE_bool(mem_info, false, "show memory information.");
 DECLARE_bool(help);
 DECLARE_bool(helpshort);
 
@@ -82,8 +81,6 @@ gflags::SetUsageMessage("command line brew\n"
 	"  how many ms of the sample interval, default is 500.\n"
 	"core_util:\n"
 	"   to monitor every tpu core on chip\n"
-	"mem_info:\n"
-	"   to show memory information\n"
 	"loop:\n"
 	"  if -loop (default): smi sample device every lms ms.\n"
 	"  if -noloop: smi sample device only once.\n");
@@ -117,7 +114,6 @@ gflags::SetUsageMessage("command line brew\n"
 	m_lms = FLAGS_lms;
 	m_op = FLAGS_opmode;
 	m_core_util = FLAGS_core_util;
-	m_mem_info = FLAGS_mem_info;
 	m_value = FLAGS_opval;
 
 }
@@ -144,10 +140,7 @@ int bm_smi_cmdline::validate_flags() {
 		if (m_core_util) {
 			m_op = "core_util";
 			return 0;
-		} else if(m_mem_info) {
-			m_op = "mem_info";
-			return 0;
-		} else {
+		} else{
 			m_op = "display";
 			return 0;
 		}

@@ -292,18 +292,8 @@ struct bm_smi_attr {
 	int card_index;
 	int chip_index_of_card;
 
-	int ion_mem_used;
-	int ion_mem_total;
-	int npu_mem_used;
-	int npu_mem_total;
-	int vpp_mem_used;
-	int vpp_mem_total;
 	int mem_used;
 	int mem_total;
-	int cma_mem_used;
-	int cma_mem_total;
-	int system_mem;
-	int ddr_size;
 	int tpu_util;
 	int tpu_util0;
 	int tpu_util1;
